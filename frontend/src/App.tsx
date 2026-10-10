@@ -5,6 +5,7 @@ import { Admin } from './pages/Admin'
 import { History } from './pages/History'
 import { Home } from './pages/Home'
 import { Predictions } from './pages/Predictions'
+import { Standings } from './pages/Standings'
 import { Loading } from './components/ui'
 
 // Las páginas con gráficas se cargan bajo demanda (Recharts pesa).
@@ -17,6 +18,7 @@ export default function App() {
     <Routes>
       <Route element={<Layout />}>
         <Route index element={<Home />} />
+        <Route path="tabla" element={<Standings />} />
         <Route path="predicciones" element={<Predictions />} />
         <Route path="historico" element={<History />} />
         <Route path="equipos" element={<Suspense fallback={<Loading />}><Teams /></Suspense>} />

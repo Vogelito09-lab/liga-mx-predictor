@@ -5,6 +5,7 @@ import { Badge } from './ui'
 
 const NAV = [
   { to: '/', label: 'Inicio' },
+  { to: '/tabla', label: 'Tabla general' },
   { to: '/predicciones', label: 'Predicciones' },
   { to: '/historico', label: 'Calendario e histórico' },
   { to: '/equipos', label: 'Equipos' },

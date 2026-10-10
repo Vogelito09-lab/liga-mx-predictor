@@ -24,6 +24,7 @@ from app.jobs import tasks
 from app.jobs.runner import run_job
 from app.predict.data import load_matches_df
 from app.predict.service import active_model, latest_backtest
+from app.predict.standings import N_QUALIFY, current_tournament, regular_table, simulate_tournament
 
 log = logging.getLogger(__name__)
 settings = get_settings()
@@ -335,34 +336,52 @@ def team_statistics(session: DB, team_id: int, last: Annotated[int, Query(ge=5, 
     }
 
 
+_sim_cache: dict = {"key": None, "result": None}
+_sim_lock = threading.Lock()
+
+
+def _simulation(session: Session, tournament: str) -> dict | None:
+    """Simulación del torneo actual; se recalcula solo cuando cambian los datos o el modelo."""
+    version = int(get_state(session, "data_version", {"version": 0}).get("version", 0))
+    mv = active_model(session)
+    key = (version, mv.version if mv else None, tournament)
+    with _sim_lock:
+        if _sim_cache["key"] != key:
+            try:
+                result = simulate_tournament(session, tournament, now=_now())
+            except Exception:  # la tabla se muestra aunque la simulación falle
+                log.exception("La simulación del torneo falló")
+                result = None
+            _sim_cache.update(key=key, result=result)
+        return _sim_cache["result"]
+
+
 @app.get("/api/standings", tags=["datos"])
-def standings(session: DB, tournament: str):
-    """Tabla de fase regular calculada con los partidos finalizados (marcador final de la fuente)."""
+def standings(session: DB, tournament: str | None = None):
+    """Tabla de fase regular calculada con los partidos finalizados (marcador final de la fuente).
+
+    Para el torneo en curso incluye la probabilidad de clasificar a la liguilla (top 8) y de ser campeón,
+    estimadas simulando el resto del torneo con el modelo activo.
+    """
+    current = current_tournament(session)
+    tournament = tournament or current
+    if tournament is None:
+        return {"tournament": None, "current": False, "rows": [], "simulation": None, "note": "Aún no hay partidos"}
     rows = session.scalars(_with_teams(select(m.Match).where(
-        m.Match.tournament == tournament, m.Match.stage == "regular", m.Match.status == m.FINISHED)))
-    table: dict[int, dict] = {}
-    for mt in rows:
-        for tid, team, gf, ga in ((mt.home_team_id, mt.home_team, mt.home_goals_final, mt.away_goals_final),
-                                  (mt.away_team_id, mt.away_team, mt.away_goals_final, mt.home_goals_final)):
-            r = table.setdefault(tid, {"team": team_out(team).model_dump(), "played": 0, "wins": 0, "draws": 0,
-                                       "losses": 0, "gf": 0, "ga": 0, "points": 0})
-            r["played"] += 1
-            r["gf"] += gf
-            r["ga"] += ga
-            if gf > ga:
-                r["wins"] += 1
-                r["points"] += 3
-            elif gf == ga:
-                r["draws"] += 1
-                r["points"] += 1
-            else:
-                r["losses"] += 1
-    out = sorted(table.values(), key=lambda r: (-r["points"], -(r["gf"] - r["ga"]), -r["gf"], r["team"]["name"]))
-    for i, r in enumerate(out, 1):
-        r["position"] = i
-        r["gd"] = r["gf"] - r["ga"]
-    return {"tournament": tournament, "note": "Calculada con los partidos registrados; los criterios oficiales "
-                                              "de desempate pueden diferir.", "rows": out}
+        m.Match.tournament == tournament, m.Match.stage == "regular", m.Match.status != m.CANCELED))).all()
+    is_current = tournament == current
+    sim = _simulation(session, tournament) if is_current else None
+    out = []
+    for r in regular_table(list(rows)):
+        probs = (sim or {}).get("teams", {}).get(r["team_id"], {})
+        out.append({"position": r["position"], "team": team_out(r["team"]).model_dump(), "played": r["played"],
+                    "wins": r["wins"], "draws": r["draws"], "losses": r["losses"], "gf": r["gf"], "ga": r["ga"],
+                    "gd": r["gd"], "points": r["points"], "p_qualify": probs.get("p_qualify"),
+                    "p_champion": probs.get("p_champion")})
+    return {"tournament": tournament, "current": is_current, "qualify_spots": N_QUALIFY,
+            "note": "Calculada con los partidos registrados. Desempate: puntos, diferencia de goles, goles a favor, "
+                    "resultado entre los empatados y goles como visitante (la tabla de Fair Play no está disponible).",
+            "simulation": {k: v for k, v in sim.items() if k != "teams"} if sim else None, "rows": out}
 
 
 @app.get("/api/model/metrics", tags=["modelo"])

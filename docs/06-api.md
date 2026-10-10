@@ -12,7 +12,7 @@ Documentación interactiva (OpenAPI) en `/docs` del backend. Todas las fechas en
 | `GET /api/predictions` | `match_id` (obligatorio) | Historial completo de predicciones de un partido (404 si no existe) |
 | `GET /api/teams` | `tournament` | Equipos |
 | `GET /api/teams/{team_id}/statistics` | `last` (5–60) | Forma, local/visitante, por torneo, evolución del Elo |
-| `GET /api/standings` | `tournament` (obligatorio) | Tabla de fase regular calculada |
+| `GET /api/standings` | `tournament` (opcional; por defecto el torneo en curso) | Tabla de fase regular calculada. En el torneo en curso cada fila trae `p_qualify` (probabilidad de quedar entre los 8 primeros) y `p_champion` (probabilidad de ser campeón), y `simulation` dice cuántas simulaciones, con qué modelo y cuándo |
 | `GET /api/model/metrics` | — | Último backtesting (todos los modelos, validación y prueba) y rendimiento real |
 | `GET /api/backtest/predictions` | `model`, `split` (validation/test), `limit` | Predicciones del backtesting |
 | `GET /api/admin/jobs` 🔒 | `limit` | Últimas ejecuciones de tareas |
