@@ -28,7 +28,7 @@ function qs(params: Record<string, string | number | undefined | null>) {
 }
 
 const admin = (token: string) => ({ headers: { Authorization: `Bearer ${token}` } })
-const bearer = (token: string | null) => (token ? { Authorization: `Bearer ${token}` } : {})
+const bearer = (token: string | null): Record<string, string> => (token ? { Authorization: `Bearer ${token}` } : {})
 const send = (method: string, body: unknown, token: string | null = null): RequestInit =>
   ({ method, headers: { 'Content-Type': 'application/json', ...bearer(token) }, body: JSON.stringify(body) })
 
