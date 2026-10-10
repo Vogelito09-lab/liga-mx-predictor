@@ -11,6 +11,7 @@ from collections.abc import Callable
 from contextlib import contextmanager
 
 from sqlalchemy import text
+from sqlalchemy.exc import DBAPIError
 from sqlalchemy.orm import Session
 
 from app import models as m
@@ -23,15 +24,22 @@ WRITE_LOCK_KEY = 482_017_2016  # número arbitrario y fijo para este proyecto
 
 @contextmanager
 def write_lock():
-    """Candado a nivel de sesión de PostgreSQL. Devuelve True si se obtuvo."""
-    conn = get_engine().connect()
+    """Candado a nivel de sesión de PostgreSQL. Devuelve True si se obtuvo.
+
+    La conexión va en AUTOCOMMIT: si quedara "idle in transaction" durante una tarea larga, Neon la cortaría
+    (idle_in_transaction_session_timeout) y el desbloqueo fallaría aunque la tarea ya hubiera terminado bien.
+    """
+    conn = get_engine().connect().execution_options(isolation_level="AUTOCOMMIT")
     try:
         got = conn.execute(text("SELECT pg_try_advisory_lock(:k)"), {"k": WRITE_LOCK_KEY}).scalar()
         try:
             yield bool(got)
         finally:
             if got:
-                conn.execute(text("SELECT pg_advisory_unlock(:k)"), {"k": WRITE_LOCK_KEY})
+                try:
+                    conn.execute(text("SELECT pg_advisory_unlock(:k)"), {"k": WRITE_LOCK_KEY})
+                except DBAPIError:  # si la conexión se cayó, PostgreSQL ya liberó el candado
+                    log.warning("No se pudo liberar el candado explícitamente; la conexión ya estaba cerrada")
     finally:
         conn.close()
 

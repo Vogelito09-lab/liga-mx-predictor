@@ -110,6 +110,27 @@ def test_job_lock_prevents_concurrent_runs(engine):
         assert got  # el candado se liberó
 
 
+def test_job_lock_survives_idle_in_transaction_timeout(engine, monkeypatch):
+    """Neon corta sesiones "idle in transaction"; el candado no debe dejar una transacción abierta."""
+    import time
+
+    from sqlalchemy import event as sa_event
+
+    def short_timeout(dbapi_conn, _record):
+        with dbapi_conn.cursor() as cur:
+            cur.execute("SET idle_in_transaction_session_timeout = '1s'")
+        dbapi_conn.commit()
+
+    sa_event.listen(engine, "connect", short_timeout)
+    engine.dispose()
+    try:
+        run = run_job("sync", "manual", lambda s: time.sleep(2.5) or {"ok": True})
+        assert run.status == "success"
+    finally:
+        sa_event.remove(engine, "connect", short_timeout)
+        engine.dispose()
+
+
 def test_failed_job_rolls_back_and_rerun_does_not_duplicate(engine, session):
     ko = datetime(2026, 10, 1, 2, 0)
     evs = [event(f"j{i}", ko + timedelta(hours=i), ("1", "A"), ("2", "B"), status="STATUS_FULL_TIME", state="post",
