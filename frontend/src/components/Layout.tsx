@@ -1,4 +1,5 @@
-import { NavLink, Outlet } from 'react-router-dom'
+import { useEffect, useRef } from 'react'
+import { NavLink, Outlet, useLocation } from 'react-router-dom'
 import { fmtDateTime, fmtTime, relative } from '../lib/format'
 import { useLive } from '../lib/live'
 import { Badge } from './ui'
@@ -27,28 +28,35 @@ export function SyncIndicator() {
         : status.is_stale ? <Badge tone="amber">Datos posiblemente atrasados</Badge>
         : <Badge tone="green">Datos actualizados</Badge>}
       <span className="text-slate-500" title={fmtDateTime(status.last_sync_success)}>
-        Última sincronización con ESPN: {relative(status.last_sync_success)}
+        <span className="hidden sm:inline">Última sincronización con ESPN: </span>{relative(status.last_sync_success)}
       </span>
-      <span className="text-slate-400">· revisado {lastChecked ? fmtTime(new Date(lastChecked).toISOString()) : '—'}{isFetching ? ' …' : ''}</span>
+      <span className="hidden text-slate-400 sm:inline">· revisado {lastChecked ? fmtTime(new Date(lastChecked).toISOString()) : '—'}{isFetching ? ' …' : ''}</span>
     </div>
   )
 }
 
 export function Layout() {
+  const nav = useRef<HTMLElement>(null)
+  const { pathname } = useLocation()
+  // En el teléfono el menú se desliza de lado: que la sección abierta siempre quede a la vista.
+  useEffect(() => {
+    nav.current?.querySelector('[aria-current="page"]')?.scrollIntoView({ block: 'nearest', inline: 'center' })
+  }, [pathname])
   return (
     <div className="min-h-screen">
       <header className="sticky top-0 z-10 border-b border-slate-200 bg-white/90 backdrop-blur dark:border-slate-800 dark:bg-slate-950/90">
         <div className="mx-auto flex max-w-6xl flex-col gap-2 px-4 py-3">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <NavLink to="/" className="flex items-center gap-2 text-lg font-bold tracking-tight">
-              <img src="/favicon.svg" alt="" width={24} height={24} /> Liga MX Predictor
+          <div className="flex items-center justify-between gap-2">
+            <NavLink to="/" className="flex min-w-0 items-center gap-2 text-base font-bold tracking-tight sm:text-lg">
+              <img src="/favicon.svg" alt="" width={24} height={24} /> <span className="truncate">Liga MX Predictor</span>
             </NavLink>
-            <div className="flex flex-wrap items-center gap-3">
-              <SyncIndicator />
+            <div className="flex items-center gap-3">
+              <span className="hidden md:block"><SyncIndicator /></span>
               <UserPanel />
             </div>
           </div>
-          <nav className="-mx-1 flex gap-1 overflow-x-auto text-sm">
+          <div className="md:hidden"><SyncIndicator /></div>
+          <nav ref={nav} className="-mx-1 flex gap-1 overflow-x-auto text-sm [scrollbar-width:none]">
             {NAV.map((n) => (
               <NavLink key={n.to} to={n.to} end={n.to === '/'}
                 className={({ isActive }) => `whitespace-nowrap rounded-lg px-3 py-1.5 ${isActive ? 'bg-brand-700 text-white' : 'text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800'}`}>

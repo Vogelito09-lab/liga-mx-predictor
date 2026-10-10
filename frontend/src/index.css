@@ -14,4 +14,9 @@
 }
 
 html { color-scheme: light dark; }
+/* En iPhone, un campo con letra menor a 16px hace zoom al tocarlo; en pantallas chicas se usa 16px. */
+@media (max-width: 639px) {
+  input:not(.text-lg), select, textarea { font-size: 16px; }
+}
+
 body { @apply bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100 antialiased; }

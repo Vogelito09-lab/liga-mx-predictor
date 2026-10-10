@@ -253,7 +253,8 @@ function PicksForm({ jornada, tournament }: { jornada: string; tournament: strin
         ))}
       </div>
       {canPlay && items.some((i) => !i.locked) && (
-        <div className="sticky bottom-2 flex flex-wrap items-center gap-3 rounded-xl border border-slate-200 bg-white/95 p-3 shadow dark:border-slate-800 dark:bg-slate-900/95">
+        // Solo se queda pegada abajo cuando hay cambios sin guardar; si no, no tapa los partidos.
+        <div className={`${edits.length ? 'sticky bottom-[max(0.5rem,env(safe-area-inset-bottom))] z-10 shadow-lg' : ''} flex flex-wrap items-center gap-3 rounded-xl border border-slate-200 bg-white p-3 dark:border-slate-800 dark:bg-slate-900`}>
           <button className={primary} disabled={save.isPending || ready.length === 0 || incomplete.length > 0} onClick={submit}>
             {save.isPending ? 'Guardando…' : `Guardar pronósticos${ready.length ? ` (${ready.length})` : ''}`}
           </button>
@@ -383,13 +384,13 @@ function RankTable({ rows, general = false }: { rows: QRow[]; general?: boolean 
   if (!rows.length) return <Empty>Todavía no hay participantes.</Empty>
   return (
     <Card className="overflow-x-auto p-0">
-      <table className="w-full min-w-[480px] text-sm tabular-nums">
+      <table className="w-full text-sm tabular-nums">
         <thead className="text-xs text-slate-500">
           <tr className="border-b border-slate-200 dark:border-slate-800">
             <th className="p-2 text-left">#</th><th className="p-2 text-left">Participante</th><th className="p-2">Puntos</th>
             <th className="p-2" title="Marcadores exactos (3 puntos)">Exactos</th><th className="p-2" title="Solo ganador o empate (1 punto)">Ganador</th>
-            <th className="p-2" title="Partidos ya calificados con pronóstico">Jugados</th>
-            {general && <th className="p-2" title="Jornadas ganadas">Jornadas ganadas</th>}
+            <th className="hidden p-2 sm:table-cell" title="Partidos ya calificados con pronóstico">Jugados</th>
+            {general && <th className="p-2" title="Jornadas ganadas"><span className="sm:hidden">Jor. ganadas</span><span className="hidden sm:inline">Jornadas ganadas</span></th>}
           </tr>
         </thead>
         <tbody>
@@ -407,7 +408,7 @@ function RankTable({ rows, general = false }: { rows: QRow[]; general?: boolean 
                 <td className="p-2 text-center text-base font-bold">{r.points}</td>
                 <td className="p-2 text-center">{r.exact}</td>
                 <td className="p-2 text-center">{r.outcome}</td>
-                <td className="p-2 text-center">{r.scored_picks}</td>
+                <td className="hidden p-2 text-center sm:table-cell">{r.scored_picks}</td>
                 {general && <td className="p-2 text-center">{r.jornadas_won}</td>}
               </tr>
             )
