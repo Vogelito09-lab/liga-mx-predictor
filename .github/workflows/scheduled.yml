@@ -7,7 +7,7 @@ on:
   schedule:
     - cron: "*/10 23 * * *"     # sincronización ligera cada 10 min en horario de partidos
     - cron: "*/10 0-6 * * *"
-    - cron: "17 */6 * * *"      # sincronización completa (calendario de 3 semanas) cada 6 h
+    - cron: "17 */6 * * *"      # sincronización completa (calendario de 60 días) cada 6 h
     - cron: "40 9 * * *"        # mantenimiento diario: auditoría, reentrenamiento según política, predicciones
     - cron: "5 11 * * 1"        # verificación cruzada semanal con Football-Data.co.uk
     - cron: "0 10 1 * *"        # backtesting mensual

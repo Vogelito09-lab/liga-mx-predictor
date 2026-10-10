@@ -68,6 +68,31 @@ con los datos reales. Este documento no incluye cifras porque todavía no se han
 - La predicción que cuenta para evaluar es la última generada antes del inicio del partido.
 - Nunca se generan predicciones para partidos iniciados o finalizados.
 
+## Probabilidad de clasificar y de ser campeón
+
+La página **Tabla general** muestra, para el torneo en curso, la probabilidad de cada equipo de quedar entre los
+8 primeros y de ganar el título. Se calcula en `backend/app/predict/standings.py` con una simulación Monte Carlo
+(10,000 repeticiones, semilla fija para que el resultado no cambie entre visitas):
+
+1. Se parte de la tabla real (partidos finalizados).
+2. Cada partido pendiente de la fase regular se juega con la matriz de marcadores del modelo de goles
+   (Dixon-Coles) del modelo activo; si el partido tiene predicción guardada, la matriz se reescala para que sus
+   probabilidades de local/empate/visitante coincidan con esa predicción. Los cruces que ESPN aún no publica en el
+   calendario (la liga es todos contra todos, una vez) se simulan promediando las dos opciones de local.
+3. Se ordena la tabla de cada simulación (puntos, diferencia de goles, goles a favor) y los 8 primeros juegan la
+   liguilla: 1-8, 2-7, 3-6, 4-5, semifinales con reacomodo, ida y vuelta con la vuelta en casa del mejor ubicado.
+   En cuartos y semifinales el empate global lo gana el mejor ubicado; en la final hay tiempos extra (goles con un
+   tercio del promedio) y penales (50 %). Los partidos de liguilla ya jugados usan su marcador real.
+
+Formato verificado (10-oct-2026): desde el Apertura 2026 no hay Play-In y clasifican directo los 8 primeros
+([Vanguardia](https://vanguardia.com.mx/deportes/futbol/asi-se-disputara-el-apertura-2026-fecha-de-inicio-adios-al-play-in-y-calendario-de-liguilla-GC20224103),
+[TUDN](https://www.tudn.com/futbol/liga-mx/hay-play-in-o-repechaje-en-la-liga-mx-apertura-2026)); desempate en
+eliminatorias según [Goal](https://www.goal.com/es-mx/noticias/como-se-define-liguilla-caso-de-empate/17q5mxhcxls1u125kbpkssurjr)
+y criterios de la tabla según [Fox Sports](https://www.foxsports.com.mx/2026/04/22/quedan-3-cupos-para-liguilla-que-criterios-de-desempate-definen-la-tabla-general/).
+La tabla de Fair Play no está en la fuente de datos, así que no se usa.
+
+La API la recalcula solo cuando cambian los datos o el modelo (tarda menos de un segundo).
+
 ## Política de reentrenamiento
 
 Actualizar estadísticas no es reentrenar: tras cada resultado, el Elo y la forma se recalculan y el modelo vigente

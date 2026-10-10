@@ -70,7 +70,7 @@ termine en verde:
 | Tarea | Cuándo (hora del centro de México) | Qué hace |
 |---|---|---|
 | `live` | Cada 10 min de 17:00 a 00:59 | Consulta ayer, hoy y mañana: estados y marcadores; si algo cambió, recalcula predicciones de partidos que no han empezado |
-| `sync` | Cada 6 h | Últimos 4 días y próximas 3 semanas: resultados, reprogramaciones y calendario nuevo |
+| `sync` | Cada 6 h | Últimos 4 días y próximos 60 días: resultados, reprogramaciones y calendario nuevo |
 | `maintenance` | Diario 03:40 | Auditoría, reentrenamiento según la política, predicciones pendientes |
 | `crosscheck` | Lunes 05:05 | Verificación cruzada con Football-Data.co.uk |
 | `backtest` | Día 1 de cada mes 04:00 | Backtesting completo, selección de modelo y entrenamiento |

@@ -68,7 +68,14 @@ export interface TeamStats {
 }
 export interface Agg { played: number; wins?: number; draws?: number; losses?: number; gf?: number; ga?: number; ppg?: number; gf_avg?: number; ga_avg?: number }
 
-export interface Standings { tournament: string; note: string; rows: { position: number; team: Team; played: number; wins: number; draws: number; losses: number; gf: number; ga: number; gd: number; points: number }[] }
+export interface StandingRow {
+  position: number; team: Team; played: number; wins: number; draws: number; losses: number; gf: number; ga: number; gd: number; points: number
+  p_qualify: number | null; p_champion: number | null
+}
+export interface Standings {
+  tournament: string | null; current: boolean; qualify_spots?: number; note: string; rows: StandingRow[]
+  simulation: { model_version: string; n_sims: number; pending_matches: number; unscheduled_matches: number; computed_at: string } | null
+}
 
 export interface JobRun { id: number; job: string; trigger: string; status: string; started_at: string; finished_at: string | null; message: string | null; stats: Record<string, unknown> }
 export interface Issue { id: number; match_id: number | null; source: string; source_key: string | null; severity: string; code: string; message: string; details: unknown; created_at: string }

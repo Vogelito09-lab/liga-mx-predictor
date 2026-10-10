@@ -167,7 +167,7 @@ Abre `http://localhost:5173`. La página consulta al backend cada 30–60 segund
 Desde `liga-mx-predictor\backend`:
 
 ```powershell
-python -m app.jobs.cli sync           # resultados de los últimos 4 días y calendario de 3 semanas
+python -m app.jobs.cli sync           # resultados de los últimos 4 días y calendario de 60 días
 python -m app.jobs.cli live           # ayer, hoy y mañana (rápido)
 python -m app.jobs.cli maintenance --force-retrain
 ```

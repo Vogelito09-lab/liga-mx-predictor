@@ -23,7 +23,7 @@ class Settings(BaseSettings):
 
     # Sincronización: días hacia atrás/adelante que se revisan en cada ejecución.
     sync_days_back: int = 4
-    sync_days_ahead: int = 21
+    sync_days_ahead: int = 60  # cubre el calendario hasta el final de la fase regular
     # Si la última sincronización es más antigua que esto, la API lo indica como "datos atrasados".
     stale_after_minutes: int = 30
 
