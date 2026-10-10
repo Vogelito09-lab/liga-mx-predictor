@@ -131,3 +131,17 @@ def test_final_test_period_does_not_influence_selection(league):
     assert r1.chosen == r2.chosen
     assert r1.summary["validation_log_loss"] == r2.summary["validation_log_loss"]
     assert r1.summary["models"][r1.selected_model]["test"] != r2.summary["models"][r2.selected_model]["test"]
+
+
+def test_stale_scheduled_record_does_not_drop_tournament(league):
+    """Caso real de ESPN: un partido 'programado' con fecha muy anterior al resto de su torneo y sin resultado."""
+    base = make_folds(league, SMALL_BT)
+    target = base.warmup[1]
+    ghost = league[league["tournament"] == target].iloc[[0]].copy()
+    ghost["match_id"] = league["match_id"].max() + 1
+    ghost["kickoff"] = league["kickoff"].min() - pd.Timedelta(days=200)
+    ghost["hg"] = np.nan
+    ghost["ag"] = np.nan
+    ghost["status"] = "scheduled"
+    folds = make_folds(pd.concat([league, ghost], ignore_index=True), SMALL_BT)
+    assert folds == base

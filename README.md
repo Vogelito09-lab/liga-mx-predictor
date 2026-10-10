@@ -34,6 +34,7 @@ Todo el proyecto usa software libre y servicios gratuitos que no piden tarjeta d
 4. [Despliegue gratuito y tareas automáticas](docs/04-despliegue.md)
 5. [Limitaciones conocidas](docs/05-limitaciones.md)
 6. [API](docs/06-api.md) (y documentación interactiva en `http://localhost:8000/docs`)
+7. [Resultados con datos reales](docs/07-resultados-reales.md)
 
 ---
 

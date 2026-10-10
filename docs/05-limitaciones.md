@@ -5,8 +5,8 @@
 - **ESPN no ofrece una API documentada oficialmente.** Puede cambiar el formato o bloquear consultas sin aviso. Todo el
   manejo del formato está en `backend/app/sources/espn.py`, y la verificación cruzada con Football-Data.co.uk detecta
   marcadores incorrectos, pero si ESPN dejara de responder habría que cambiar de fuente.
-- **Cobertura histórica**: se verificó que ESPN tiene partidos desde el Apertura 2016. La cobertura completa partido por
-  partido (huecos, partidos faltantes) se medirá en la primera descarga real y quedará en este documento.
+- **Cobertura histórica**: ESPN tiene todos los torneos desde el Apertura 2016 (16-jul-2016) con el número esperado de
+  partidos por torneo. Detalle y diferencias con Football-Data.co.uk en [07-resultados-reales.md](07-resultados-reales.md).
 - **Torneo Clausura 2020**: se canceló por la pandemia sin liguilla; esos partidos son válidos pero el torneo queda
   incompleto (el backtesting solo usa torneos con al menos 60 partidos).
 - **Jornada**: ESPN no la publica; se deriva por orden de partidos de cada equipo. Un partido reprogramado puede aparecer
@@ -33,6 +33,5 @@
 
 ## Entorno de desarrollo
 
-- El entorno en la nube donde se programó esta versión no tenía acceso a ESPN ni a Football-Data.co.uk (solo a
-  gestores de paquetes). El código se probó con una liga **simulada** y con eventos que replican el formato verificado
-  de ESPN; la primera descarga real se hará con acceso a esos dominios.
+- La primera descarga real (10-oct-2026) se hizo en un entorno en la nube con acceso a ESPN, Football-Data.co.uk y PyPI,
+  usando PostgreSQL local. Los resultados están en [07-resultados-reales.md](07-resultados-reales.md).
