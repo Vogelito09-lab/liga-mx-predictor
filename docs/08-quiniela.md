@@ -36,7 +36,7 @@ automática, así que las tablas se actualizan solas y una corrección de la fue
 
 - Nombres únicos (sin distinguir mayúsculas ni acentos); se pueden cambiar después.
 - **Escudo (foto de perfil)**: cada quien elige el escudo de un equipo de la Liga MX actual (se pueden repetir).
-  Sale junto a su nombre en las tablas y en los pronósticos. Sin escudo se muestra un círculo con su inicial.
+  Sale junto a su nombre en las tablas y en los pronósticos. Sin escudo se muestra un círculo con su inicial. El modelo (participante virtual) tiene un robot como avatar.
 - **Panel arriba a la derecha**: nombre y escudo de quien entró; al darle clic muestra sus puntos y su lugar en
   la tabla general, **Mi perfil** (`/quiniela/perfil`: cambiar nombre, escudo y contraseña) y **Cerrar sesión**.
 - **Olvidó su contraseña**: en Administración, botón **Enlace de contraseña** junto a su nombre. El enlace

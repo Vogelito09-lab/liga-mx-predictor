@@ -304,7 +304,7 @@ function PickRow({ it, canPlay, value, onChange }: { it: QItem; canPlay: boolean
       <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-slate-600 dark:text-slate-400">
         {started && m.home_goals !== null && <span>Resultado (90'): <b className="tabular-nums">{m.home_goals}–{m.away_goals}</b></span>}
         {it.my_pick && <PointsBadge p={it.my_pick} prefix="Tú" />}
-        {it.model_pick && <span>Modelo: <b className="tabular-nums">{it.model_pick.home}–{it.model_pick.away}</b>{it.model_pick.points !== null && ` (${it.model_pick.points} pts)`}</span>}
+        {it.model_pick && <span className="inline-flex items-center gap-1"><Avatar name="Modelo" crestUrl={null} isModel size={16} />Modelo: <b className="tabular-nums">{it.model_pick.home}–{it.model_pick.away}</b>{it.model_pick.points !== null && ` (${it.model_pick.points} pts)`}</span>}
         {it.locked && it.picks.length > 0 && (
           <button className="text-brand-700 underline dark:text-brand-500" onClick={() => setShowAll((s) => !s)}>
             {showAll ? 'Ocultar pronósticos' : `Ver pronósticos de todos (${it.picks.length})`}
