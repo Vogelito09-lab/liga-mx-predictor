@@ -421,10 +421,10 @@ def jornada_detail(key: str, session: DB, user: OptionalUser, tournament: str | 
     """Partidos de una jornada con tu pronóstico, el del modelo y, ya iniciado cada partido, los de todos."""
     t = _tournament(session, tournament)
     now = _now()
-    groups = dict((j.key, ms) for j, ms in q.group_jornadas(q.tournament_matches(session, t)))
+    groups = {j.key: (j, ms) for j, ms in q.group_jornadas(q.tournament_matches(session, t))}
     if key not in groups:
         raise HTTPException(404, "Jornada no encontrada")
-    ms = groups[key]
+    j, ms = groups[key]
     ids = [mt.id for mt in ms]
     users = q.participants(session)
     picks = q.user_picks(session, ids)
@@ -454,7 +454,6 @@ def jornada_detail(key: str, session: DB, user: OptionalUser, tournament: str | 
                            "kind": model_res[1] if model_res else None} if model else None,
             "picks": others,
         })
-    j = q.jornada_of(ms[0])
     return {"tournament": t, "key": key, "label": j.label, "liguilla": j.liguilla, "items": items}
 
 

@@ -39,7 +39,7 @@ function Rules() {
   return (
     <Card className="text-sm text-slate-600 dark:text-slate-400">
       Pronostica el marcador de cada partido antes de que empiece. <b>Marcador exacto: 3 puntos.</b> Solo el ganador
-      o el empate: 1 punto. Se califica con el marcador a los 90 minutos. Puedes cambiar tu pronóstico hasta que el
+      o el empate: 1 punto. Se califica con el marcador a los 90 minutos. Cada jornada trae los partidos que se juegan esa semana, también los reprogramados. Puedes cambiar tu pronóstico hasta que el
       partido inicia; desde ese momento todos ven los pronósticos de todos. Empate en la tabla: gana quien tenga más
       marcadores exactos. El modelo de la página juega con su marcador más probable para que veas si le ganas.
     </Card>

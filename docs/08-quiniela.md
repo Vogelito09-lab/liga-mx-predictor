@@ -17,9 +17,12 @@ jornada y la página lleva una tabla por jornada y una tabla general del torneo.
 | Liguilla | Cuenta igual que la fase regular. Para puntos dobles: `QUINIELA_LIGUILLA_MULTIPLIER=2` |
 | El modelo | Juega como participante virtual con su marcador más probable (la última predicción antes del inicio). Aparece en las tablas pero el campeón es el mejor participante humano |
 
-Las jornadas son las de la fase regular (calculadas igual que en el resto de la página) más Play-In,
-Cuartos de final, Semifinales y Final. Un partido reprogramado puede quedar en otra jornada; como cada
-partido se cierra a su propia hora, eso no afecta los puntos.
+Cada jornada de la quiniela tiene los partidos que **se juegan esa semana**. ESPN no publica el número de
+jornada oficial y la página lo calcula; un partido reprogramado quedaría en su jornada original aunque se
+juegue semanas después. Por eso la quiniela lo pasa a la jornada en cuyas fechas se juega (la ventana de
+fechas de la mayoría de sus partidos; si no cae en ninguna, la más cercana). Después vienen Play-In,
+Cuartos de final, Semifinales y Final. Los pronósticos van pegados a cada partido, así que mover un
+partido de jornada no los afecta; solo cambia en qué tabla de jornada cuenta.
 
 Los puntos no se guardan: se calculan cada vez con los resultados confirmados que trae la sincronización
 automática, así que las tablas se actualizan solas y una corrección de la fuente se refleja sin hacer nada.
