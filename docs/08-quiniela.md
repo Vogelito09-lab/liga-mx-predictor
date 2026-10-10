@@ -29,7 +29,7 @@ automática, así que las tablas se actualizan solas y una corrección de la fue
 
 ## Cuentas: el organizador aprueba a cada persona
 
-1. En **Quiniela → Pedir acceso** la persona escribe su nombre (el que verán todos), su correo, una contraseña y, si quiere, el escudo de su equipo.
+1. En **Quiniela → Registro** la persona escribe su nombre (el que verán todos), su correo, una contraseña y, si quiere, el escudo de su equipo.
 2. La solicitud aparece en **Administración → Quiniela: solicitudes y participantes** (entras con el `ADMIN_TOKEN`).
 3. El organizador da clic en **Aprobar** o **Rechazar**. Sin aprobar nadie puede entrar ni pronosticar.
 4. Ya aprobada, la persona entra con su correo y contraseña. El correo nunca se muestra en las tablas.
@@ -43,7 +43,7 @@ automática, así que las tablas se actualizan solas y una corrección de la fue
   sirve 24 horas y una sola vez; se manda por WhatsApp.
 - **Borrar**: saca a la persona de la quiniela junto con sus pronósticos.
 - Seguridad: las contraseñas se guardan con scrypt (no se pueden leer); de las sesiones y enlaces solo se
-  guarda un hash. Hay límite de intentos para iniciar sesión y para pedir acceso.
+  guarda un hash. Hay límite de intentos para iniciar sesión y para registrarse.
 
 No hace falta ninguna variable nueva en Render. Opcionales (servicio `ligamx-api` → **Environment**):
 
@@ -65,7 +65,7 @@ septiembre de 2025, por eso no se puede usar Gmail directo.
 | Método y ruta | Descripción |
 |---|---|
 | `GET /api/auth/config` | Si el registro está abierto y si hay correos |
-| `POST /api/auth/register` | Pedir acceso: `display_name`, `email`, `password`, `crest_team_id` opcional (`invite_code` si se configuró) |
+| `POST /api/auth/register` | Registro: `display_name`, `email`, `password`, `crest_team_id` opcional (`invite_code` si se configuró) |
 | `POST /api/auth/verify` | `token` del correo (solo con correos activados) |
 | `POST /api/auth/resend-verification` | `email` |
 | `POST /api/auth/login` | `email`, `password` → `token` de sesión (60 días). 423 si falta la aprobación |

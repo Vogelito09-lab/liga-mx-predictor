@@ -82,7 +82,7 @@ function AuthPanel() {
     <Card className="mx-auto w-full max-w-md space-y-4">
       <div className="flex gap-2 text-sm">
         <Tab active={mode === 'login'} onClick={() => setMode('login')}>Entrar</Tab>
-        <Tab active={mode === 'register'} onClick={() => setMode('register')}>Pedir acceso</Tab>
+        <Tab active={mode === 'register'} onClick={() => setMode('register')}>Registro</Tab>
       </div>
       {mode === 'login' && <LoginForm onForgot={() => setMode('forgot')} />}
       {mode === 'register' && (cfg.data && !cfg.data.registration_open
@@ -149,8 +149,8 @@ function RegisterForm({ codeRequired }: { codeRequired: boolean }) {
       <p className="text-sm text-slate-500">Elige tu escudo (será tu foto de perfil; lo puedes cambiar después):</p>
       <CrestPicker value={crest} onChange={setCrest} />
       {codeRequired && <input className={input} value={code} onChange={(e) => setCode(e.target.value)} placeholder="Código de invitación" autoComplete="off" required />}
-      <p className="text-xs text-slate-500">Tu solicitud le llega al organizador de la quiniela. Cuando te apruebe ya podrás entrar con tu correo y contraseña.</p>
-      <button className={primary} disabled={reg.isPending}>Pedir acceso</button>
+      <p className="text-xs text-slate-500">Tu registro le llega al organizador de la quiniela. Cuando te apruebe ya podrás entrar con tu correo y contraseña.</p>
+      <button className={primary} disabled={reg.isPending}>Registrarme</button>
       {(localError || reg.error) && <Alert>{localError || reg.error?.message}</Alert>}
     </form>
   )
