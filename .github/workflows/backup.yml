@@ -1,0 +1,29 @@
+# Copia de seguridad semanal de la base de datos (pg_dump) guardada como artefacto de GitHub (90 días, gratis).
+name: Copia de seguridad
+
+on:
+  schedule:
+    - cron: "30 12 * * 0"
+  workflow_dispatch:
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Instalar cliente de PostgreSQL 16
+        run: |
+          sudo install -d /usr/share/postgresql-common/pgdg
+          sudo curl -fsSL -o /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc https://www.postgresql.org/media/keys/ACCC4CF8.asc
+          echo "deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.asc] https://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" | sudo tee /etc/apt/sources.list.d/pgdg.list
+          sudo apt-get update -qq && sudo apt-get install -y -qq postgresql-client-16
+      - name: Volcado
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: |
+          URL="${DATABASE_URL/postgresql+psycopg:/postgresql:}"
+          /usr/lib/postgresql/16/bin/pg_dump "$URL" --format=custom --no-owner --file=ligamx-$(date -u +%Y%m%d).dump
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ligamx-backup
+          path: "*.dump"
+          retention-days: 90

@@ -1,7 +1,7 @@
 """Configuración de la aplicación leída de variables de entorno (.env)."""
 from functools import lru_cache
 
-from pydantic import Field
+from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -26,6 +26,15 @@ class Settings(BaseSettings):
     sync_days_ahead: int = 21
     # Si la última sincronización es más antigua que esto, la API lo indica como "datos atrasados".
     stale_after_minutes: int = 30
+
+    @field_validator("database_url")
+    @classmethod
+    def _driver(cls, v: str) -> str:
+        # Neon y Render entregan "postgres://" o "postgresql://"; SQLAlchemy necesita el driver psycopg 3.
+        for prefix in ("postgres://", "postgresql://"):
+            if v.startswith(prefix):
+                return "postgresql+psycopg://" + v[len(prefix):]
+        return v
 
     @property
     def cors_origin_list(self) -> list[str]:

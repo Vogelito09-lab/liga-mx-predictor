@@ -61,14 +61,16 @@ Liguilla: se predice el resultado a los 90 minutos; la prórroga y los penales s
 
 ## 5. Plan por fases
 
-1. ✅ Fuentes, arquitectura y plan (este documento).
-2. Ingesta ESPN + Football-Data, normalización de equipos, validaciones, carga idempotente.
-3. Ingeniería de características con prueba anti-fuga.
-4–5. Modelos A–E, backtesting con origen móvil, selección y prueba final.
-6. API FastAPI + predicciones inmutables.
-7. Frontend.
-8. Worker programado + SSE + prueba simulada programado→en curso→finalizado.
-9. Seguridad, pruebas, README para Windows y despliegue gratuito (Neon + Render + GitHub Actions).
+| Fase | Estado (2026-10-10) |
+|---|---|
+| 1. Fuentes, arquitectura y plan | ✅ Hecho |
+| 2. Ingesta ESPN + Football-Data, normalización, validaciones, carga idempotente | ✅ Código y pruebas listos · ⏳ descarga real pendiente de acceso a red |
+| 3. Variables con prueba anti-fuga | ✅ Hecho |
+| 4–5. Modelos A–F, backtesting con origen móvil, selección y prueba final | ✅ Código y pruebas listos · ⏳ métricas reales pendientes de datos |
+| 6. API FastAPI + predicciones inmutables | ✅ Hecho |
+| 7. Frontend | ✅ Hecho |
+| 8. Tareas programadas + actualización sin recargar + prueba programado→en juego→final | ✅ Hecho (prueba con navegador real) |
+| 9. Seguridad, pruebas, README para Windows y despliegue gratuito | ✅ Hecho · ⏳ despliegue real cuando haya repositorio y cuentas |
 
 ## 6. Riesgos
 

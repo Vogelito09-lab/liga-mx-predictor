@@ -236,12 +236,15 @@ def matches(session: DB,
 
 @app.get("/api/fixtures/upcoming", response_model=list[MatchOut], tags=["predicciones"])
 def upcoming(session: DB, days: Annotated[int, Query(ge=1, le=60)] = 14):
+    """Partidos en juego, programados en los próximos `days` días y finalizados en las últimas 12 h."""
     now = _now()
     rows = session.scalars(_with_teams(
         select(m.Match).where(
             or_(m.Match.status == m.IN_PROGRESS,
                 and_(m.Match.status.in_([m.SCHEDULED, m.POSTPONED]), m.Match.kickoff_utc >= now - timedelta(hours=3),
-                     m.Match.kickoff_utc <= now + timedelta(days=days))))
+                     m.Match.kickoff_utc <= now + timedelta(days=days)),
+                # recién terminados: siguen visibles unas horas para que el marcador final aparezca en su lugar
+                and_(m.Match.status == m.FINISHED, m.Match.kickoff_utc >= now - timedelta(hours=12))))
         .order_by(m.Match.kickoff_utc, m.Match.id))).all()
     preds = latest_pre_kickoff(session, [r.id for r in rows])
     return [match_out(r, preds.get(r.id)) for r in rows]
