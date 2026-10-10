@@ -241,3 +241,69 @@ class AppState(Base):
     key: Mapped[str] = mapped_column(String(60), primary_key=True)
     value: Mapped[dict] = mapped_column(JSON)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, onupdate=utcnow)
+
+
+# ---------------------------------------------------------------------------------------------------
+# Quiniela entre amigos: cuentas de usuario y pronósticos
+# ---------------------------------------------------------------------------------------------------
+class User(Base):
+    __tablename__ = "users"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    email: Mapped[str] = mapped_column(String(254), unique=True)  # siempre en minúsculas
+    password_hash: Mapped[str] = mapped_column(String(200))
+    # Nombre que aparece en las tablas (nunca se muestra el correo). Se elige al primer ingreso.
+    display_name: Mapped[str | None] = mapped_column(String(24))
+    display_name_key: Mapped[str | None] = mapped_column(String(24), unique=True)  # minúsculas, sin acentos
+    email_verified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    last_login_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+class UserSession(Base):
+    """Sesión iniciada. Solo se guarda el hash del token que tiene el navegador."""
+
+    __tablename__ = "user_sessions"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    token_hash: Mapped[str] = mapped_column(String(64), unique=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+
+    user: Mapped[User] = relationship()
+
+
+class EmailToken(Base):
+    """Enlace de un solo uso enviado por correo: confirmar la cuenta o restablecer la contraseña."""
+
+    __tablename__ = "email_tokens"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    purpose: Mapped[str] = mapped_column(String(10))  # verify | reset
+    token_hash: Mapped[str] = mapped_column(String(64), unique=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    used_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+    user: Mapped[User] = relationship()
+
+
+class QuinielaPick(Base):
+    """Marcador que un usuario pronosticó para un partido. Se puede cambiar hasta que el partido empieza."""
+
+    __tablename__ = "quiniela_picks"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
+    match_id: Mapped[int] = mapped_column(ForeignKey("matches.id"))
+    home_goals: Mapped[int] = mapped_column(Integer)
+    away_goals: Mapped[int] = mapped_column(Integer)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+
+    user: Mapped[User] = relationship()
+
+    __table_args__ = (UniqueConstraint("user_id", "match_id", name="uq_pick_user_match"),
+                      Index("ix_picks_match", "match_id"))

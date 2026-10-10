@@ -35,6 +35,7 @@ Todo el proyecto usa software libre y servicios gratuitos que no piden tarjeta d
 5. [Limitaciones conocidas](docs/05-limitaciones.md)
 6. [API](docs/06-api.md) (y documentación interactiva en `http://localhost:8000/docs`)
 7. [Resultados con datos reales](docs/07-resultados-reales.md)
+8. [Quiniela entre amigos](docs/08-quiniela.md)
 
 ---
 

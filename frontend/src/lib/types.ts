@@ -79,3 +79,43 @@ export interface Standings {
 
 export interface JobRun { id: number; job: string; trigger: string; status: string; started_at: string; finished_at: string | null; message: string | null; stats: Record<string, unknown> }
 export interface Issue { id: number; match_id: number | null; source: string; source_key: string | null; severity: string; code: string; message: string; details: unknown; created_at: string }
+
+// ---- Quiniela ----
+export interface AuthUser { id: number; email: string; display_name: string | null; email_verified: boolean }
+export interface AuthResult { token: string; user: AuthUser }
+export interface AuthConfig { registration_open: boolean; email_enabled: boolean }
+export interface MessageResult { ok: boolean; email_sent: boolean; message: string; email_enabled?: boolean }
+
+export interface QJornadaSummary {
+  key: string; label: string; liguilla: boolean; matches: number; open_matches: number
+  first_kickoff: string; last_kickoff: string; finished: boolean; missing_picks: number | null
+}
+export interface QJornadas {
+  tournament: string; tournaments: string[]; current: string | null; liguilla_multiplier: number
+  jornadas: QJornadaSummary[]
+}
+export type PickKind = 'exacto' | 'resultado' | 'fallo'
+export interface QPick { home: number; away: number; points: number | null; kind: PickKind | null }
+export interface QOtherPick extends QPick { display_name: string; is_me: boolean }
+export interface QMatch {
+  id: number; kickoff_utc: string; status: MatchStatus; status_detail: string | null; live_clock: string | null
+  stage: string; stage_detail: string | null; round: number | null; home: Team; away: Team
+  home_goals: number | null; away_goals: number | null; home_goals_final: number | null; away_goals_final: number | null
+  extra_time: boolean
+}
+export interface QItem {
+  match: QMatch; locked: boolean; scored: boolean; multiplier: number
+  my_pick: QPick | null; model_pick: QPick | null; picks: QOtherPick[]
+}
+export interface QJornadaDetail { tournament: string; key: string; label: string; liguilla: boolean; items: QItem[] }
+export interface QRow {
+  position: number; user_id: number | null; display_name: string; is_model: boolean; points: number; exact: number
+  outcome: number; scored_picks: number; pending_picks: number; jornadas_won: number; by_jornada: Record<string, number>
+}
+export interface QJornadaTable {
+  key: string; label: string; liguilla: boolean; matches: number; finished_matches: number; finished: boolean
+  winners: string[]; rows: QRow[]
+}
+export interface QTables { tournament: string; finished: boolean; winners: string[]; rows: QRow[]; jornadas: QJornadaTable[] }
+export interface AdminUser extends AuthUser { created_at: string; last_login_at: string | null; picks: number }
+export interface AdminUsers { email_enabled: boolean; registration_open: boolean; items: AdminUser[] }

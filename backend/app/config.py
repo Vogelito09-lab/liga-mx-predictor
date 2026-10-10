@@ -29,6 +29,19 @@ class Settings(BaseSettings):
     # Sin partidos en juego la sincronización completa corre cada 6 h (GitHub puede retrasarla un poco).
     stale_after_minutes_idle: int = 7 * 60
 
+    # Quiniela entre amigos
+    quiniela_invite_code: str = Field("", description="Código secreto para registrarse. Vacío = registro cerrado.")
+    quiniela_liguilla_multiplier: int = Field(1, description="Multiplicador de puntos en la liguilla (1 = normales)")
+    # Dirección pública de la página (para los enlaces de los correos). Vacío = el primer valor de CORS_ORIGINS.
+    web_url: str = ""
+    # Envío de correos: "" (no se envían; el administrador confirma a mano), "brevo" o "mailjet".
+    # Render gratis bloquea los puertos SMTP, por eso se usan servicios que envían por HTTPS.
+    email_provider: str = ""
+    email_api_key: str = ""
+    email_api_secret: str = ""  # solo Mailjet
+    email_from: str = ""  # remitente verificado en el servicio de correo
+    email_from_name: str = "Quiniela Liga MX"
+
     @field_validator("database_url")
     @classmethod
     def _driver(cls, v: str) -> str:
@@ -41,6 +54,11 @@ class Settings(BaseSettings):
     @property
     def cors_origin_list(self) -> list[str]:
         return [o.strip() for o in self.cors_origins.split(",") if o.strip()]
+
+    @property
+    def public_web_url(self) -> str:
+        url = self.web_url or (self.cors_origin_list[0] if self.cors_origin_list else "")
+        return url.rstrip("/")
 
 
 @lru_cache

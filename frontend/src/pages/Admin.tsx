@@ -62,6 +62,7 @@ export function Admin() {
           sincronización completa cada 6 h, mantenimiento diario (reentrenamiento según política) y backtesting mensual.
         </p>
       </Card>
+      <QuinielaUsers token={token} />
       <Card className="overflow-x-auto">
         <h3 className="mb-2 text-sm font-semibold">Últimas ejecuciones</h3>
         {jobs.isLoading ? <Loading /> : !jobs.data?.length ? <Empty>Sin ejecuciones registradas.</Empty> : (
@@ -90,5 +91,48 @@ export function Admin() {
           </table>)}
       </Card>
     </div>
+  )
+}
+
+function QuinielaUsers({ token }: { token: string }) {
+  const qc = useQueryClient()
+  const users = useQuery({ queryKey: ['admin-users', token], queryFn: () => api.adminUsers(token) })
+  const act = useMutation({
+    mutationFn: ({ id, action }: { id: number; action: 'verify' | 'delete' }) => api.adminUserAction(token, id, action),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['admin-users'] }),
+  })
+  const [link, setLink] = useState<{ email: string; link: string } | null>(null)
+  const makeLink = useMutation({ mutationFn: (u: { id: number; email: string }) => api.adminUserLink(token, u.id).then((r) => ({ email: u.email, link: r.link })), onSuccess: setLink })
+  return (
+    <Card className="space-y-3 overflow-x-auto">
+      <h3 className="text-sm font-semibold">Quiniela: participantes</h3>
+      {users.data && (
+        <p className="text-xs text-slate-500">
+          Registro {users.data.registration_open ? 'abierto (con código de invitación)' : 'cerrado: define QUINIELA_INVITE_CODE en Render'} ·
+          Correos {users.data.email_enabled ? 'activados' : 'desactivados: confirma aquí a cada persona y usa "Enlace de contraseña" si alguien la olvida'}.
+        </p>
+      )}
+      {users.isLoading ? <Loading /> : users.error ? <ErrorBox error={users.error} /> : !users.data?.items.length ? <Empty>Nadie se ha registrado todavía.</Empty> : (
+        <table className="w-full min-w-[640px] text-xs">
+          <thead className="text-slate-500"><tr><th className="text-left">Correo</th><th className="text-left">Nombre</th><th>Confirmado</th><th>Pronósticos</th><th className="text-left">Registro</th><th /></tr></thead>
+          <tbody>{users.data.items.map((u) => (
+            <tr key={u.id} className="border-t border-slate-100 dark:border-slate-800">
+              <td className="py-1">{u.email}</td><td>{u.display_name ?? '—'}</td>
+              <td className="text-center">{u.email_verified ? <Badge tone="green">Sí</Badge> : <button className="underline" onClick={() => act.mutate({ id: u.id, action: 'verify' })}>Confirmar</button>}</td>
+              <td className="text-center">{u.picks}</td><td>{fmtDateTime(u.created_at)}</td>
+              <td className="space-x-2 text-right">
+                <button className="underline" onClick={() => makeLink.mutate(u)}>Enlace de contraseña</button>
+                <button className="text-red-700 underline" onClick={() => { if (confirm(`¿Borrar a ${u.email} y todos sus pronósticos?`)) act.mutate({ id: u.id, action: 'delete' }) }}>Borrar</button>
+              </td>
+            </tr>))}</tbody>
+        </table>)}
+      {link && (
+        <div className="rounded-lg bg-slate-50 p-2 text-xs dark:bg-slate-800/50">
+          Enlace para que <b>{link.email}</b> elija una contraseña nueva (sirve 24 horas, una sola vez). Mándaselo por WhatsApp:
+          <input readOnly value={link.link} onFocus={(e) => e.target.select()} className="mt-1 w-full rounded border px-2 py-1 font-mono dark:bg-slate-900" />
+        </div>
+      )}
+      {(act.error || makeLink.error) && <ErrorBox error={act.error ?? makeLink.error} />}
+    </Card>
   )
 }

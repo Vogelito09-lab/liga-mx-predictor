@@ -17,8 +17,8 @@ from datetime import datetime, timedelta, timezone
 
 import numpy as np
 import pandas as pd
-from sqlalchemy import func, select
-from sqlalchemy.orm import Session
+from sqlalchemy import and_, func, select
+from sqlalchemy.orm import Session, joinedload
 
 from app import models as m
 from app.features.build import FeatureParams, build_features
@@ -262,3 +262,18 @@ def generate_predictions(session: Session, now: datetime | None = None) -> dict:
         created += 1
     session.flush()
     return {"created": created, "skipped": skipped, "model_version": mv.version}
+
+
+def latest_pre_kickoff(session: Session, match_ids: list[int]) -> dict[int, m.Prediction]:
+    """Última predicción generada ANTES del inicio de cada partido (la que cuenta para evaluar)."""
+    if not match_ids:
+        return {}
+    sub = (select(m.Prediction.match_id, func.max(m.Prediction.generated_at).label("g"))
+           .join(m.Match, m.Match.id == m.Prediction.match_id)
+           .where(m.Prediction.match_id.in_(match_ids), m.Prediction.generated_at < m.Match.kickoff_utc)
+           .group_by(m.Prediction.match_id).subquery())
+    rows = session.scalars(
+        select(m.Prediction).options(joinedload(m.Prediction.model_version))
+        .join(sub, and_(m.Prediction.match_id == sub.c.match_id, m.Prediction.generated_at == sub.c.g))
+    ).all()
+    return {p.match_id: p for p in rows}
