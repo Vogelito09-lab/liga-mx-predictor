@@ -1,11 +1,12 @@
 import { useQuery } from '@tanstack/react-query'
 import { Link, useParams } from 'react-router-dom'
 import { Bar, BarChart, CartesianGrid, Legend, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
+import { MatchCard } from '../components/MatchCard'
 import { TeamLogo } from '../components/TeamLogo'
 import { Badge, Card, Empty, ErrorBox, Loading, SectionTitle, Stat } from '../components/ui'
 import { api } from '../lib/api'
 import { fmtDate, num } from '../lib/format'
-import type { Agg } from '../lib/types'
+import type { Agg, Team } from '../lib/types'
 
 export function Teams() {
   const seasons = useQuery({ queryKey: ['seasons'], queryFn: api.seasons })
@@ -37,6 +38,41 @@ function AggCard({ title, a }: { title: string; a: Agg }) {
   )
 }
 
+/** Partidos que le faltan al equipo en el torneo en curso, con la predicción del modelo cuando ya existe. */
+function PendingMatches({ team }: { team: Team }) {
+  const seasons = useQuery({ queryKey: ['seasons'], queryFn: api.seasons })
+  const current = seasons.data?.[0]?.tournament
+  const ms = useQuery({
+    queryKey: ['team-matches', team.id, current],
+    queryFn: () => api.matches({ tournament: current, team_id: team.id, stage: 'regular', order: 'asc', limit: 50 }),
+    enabled: !!current,
+  })
+  const rivals = useQuery({ queryKey: ['teams', current], queryFn: () => api.teams(current), enabled: !!current })
+  if (seasons.isLoading || ms.isLoading) return <Loading />
+  if (ms.error) return <ErrorBox error={ms.error} />
+  const all = ms.data?.items ?? []
+  const pending = all.filter((m) => m.status !== 'finished' && m.status !== 'canceled')
+  const seen = new Set(all.flatMap((m) => [m.home.id, m.away.id]))
+  const unscheduled = (rivals.data ?? []).filter((t) => t.id !== team.id && !seen.has(t.id))
+  return (
+    <section>
+      <h3 className="mb-2 text-sm font-semibold">Partidos pendientes · {current} ({pending.length + unscheduled.length})</h3>
+      {pending.length === 0 && unscheduled.length === 0 && <Empty>No le quedan partidos de fase regular en este torneo.</Empty>}
+      <div className="grid gap-3 md:grid-cols-2">{pending.map((m) => <MatchCard key={m.id} m={m} />)}</div>
+      {unscheduled.length > 0 && (
+        <Card className="mt-3">
+          <div className="text-sm font-medium">Rivales que faltan sin fecha publicada todavía</div>
+          <div className="mt-2 flex flex-wrap gap-3">
+            {unscheduled.map((t) => <span key={t.id} className="flex items-center gap-1 text-sm"><TeamLogo team={t} size={18} />{t.name}</span>)}
+          </div>
+          <p className="mt-2 text-xs text-slate-500">ESPN aún no publica la fecha ni quién es local; aparecerán arriba con su predicción en cuanto se publiquen.</p>
+        </Card>
+      )}
+      <p className="mt-2 text-xs text-slate-500">La predicción se genera hasta 30 días antes de cada partido.</p>
+    </section>
+  )
+}
+
 export function TeamDetail() {
   const { id } = useParams()
   const q = useQuery({ queryKey: ['team', id], queryFn: () => api.teamStats(Number(id)) })
@@ -57,6 +93,7 @@ export function TeamDetail() {
           </div>
         </div>
       </div>
+      <PendingMatches team={s.team} />
       <div className="grid gap-3 md:grid-cols-3">
         <AggCard title="Últimos 20 partidos" a={s.summary_recent} />
         <AggCard title="Como local (últimos 20)" a={s.home_recent} />
