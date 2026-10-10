@@ -25,9 +25,9 @@ export function Profile() {
       <SectionTitle>Mi perfil</SectionTitle>
       <div className="flex items-center gap-3">
         <Avatar name={user.display_name ?? '?'} crestUrl={user.crest?.logo_url} size={56} />
-        <div>
+        <div className="min-w-0">
           <div className="text-lg font-semibold">{user.display_name ?? 'Sin nombre'}</div>
-          <div className="text-sm text-slate-500">{user.email} (solo tú lo ves)</div>
+          <div className="break-all text-sm text-slate-500">{user.email} (solo tú lo ves)</div>
         </div>
       </div>
       <NameForm />

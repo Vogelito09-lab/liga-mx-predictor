@@ -22,21 +22,21 @@ export function UserPanel() {
   }, [open])
 
   if (!user) {
-    return <Link to="/quiniela" className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm hover:bg-slate-100 dark:border-slate-700 dark:hover:bg-slate-800">Entrar a la quiniela</Link>
+    return <Link to="/quiniela" className="shrink-0 whitespace-nowrap rounded-lg border border-slate-300 px-3 py-1.5 text-sm hover:bg-slate-100 dark:border-slate-700 dark:hover:bg-slate-800">Entrar<span className="hidden sm:inline"> a la quiniela</span></Link>
   }
   const name = user.display_name ?? 'Elige tu nombre'
   const row = tables.data?.rows.find((r) => r.user_id === user.id)
   const item = 'block w-full rounded-lg px-3 py-2 text-left hover:bg-slate-100 dark:hover:bg-slate-800'
   return (
-    <div className="relative" ref={ref}>
+    <div className="relative shrink-0" ref={ref}>
       <button onClick={() => setOpen((o) => !o)} aria-haspopup="menu" aria-expanded={open}
         className="flex items-center gap-2 rounded-full border border-slate-200 py-1 pl-1 pr-3 text-sm font-medium hover:bg-slate-100 dark:border-slate-700 dark:hover:bg-slate-800">
         <Avatar name={name} crestUrl={user.crest?.logo_url} size={28} />
-        <span className="max-w-[10rem] truncate">{name}</span>
+        <span className="max-w-[7rem] truncate sm:max-w-[10rem]">{name}</span>
         <span className="text-xs text-slate-400" aria-hidden>▾</span>
       </button>
       {open && (
-        <div role="menu" className="absolute right-0 z-20 mt-2 w-64 rounded-xl border border-slate-200 bg-white p-2 text-sm shadow-lg dark:border-slate-800 dark:bg-slate-900">
+        <div role="menu" className="absolute right-0 z-20 mt-2 w-64 max-w-[calc(100vw-2rem)] rounded-xl border border-slate-200 bg-white p-2 text-sm shadow-lg dark:border-slate-800 dark:bg-slate-900">
           <div className="flex items-center gap-3 px-3 py-2">
             <Avatar name={name} crestUrl={user.crest?.logo_url} size={40} />
             <div className="min-w-0">

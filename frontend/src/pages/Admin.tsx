@@ -110,7 +110,7 @@ function QuinielaUsers({ token }: { token: string }) {
   const pending = users.data?.items.filter((u) => !u.approved) ?? []
   const approved = users.data?.items.filter((u) => u.approved) ?? []
   return (
-    <Card className="space-y-4 overflow-x-auto">
+    <Card className="space-y-4">
       <h3 className="text-sm font-semibold">Quiniela: solicitudes y participantes</h3>
       {users.isLoading ? <Loading /> : users.error ? <ErrorBox error={users.error} /> : (
         <>
@@ -120,7 +120,7 @@ function QuinielaUsers({ token }: { token: string }) {
             </h4>
             {!pending.length ? <p className="text-xs text-slate-500">No hay solicitudes por revisar.</p> : pending.map((u) => (
               <div key={u.id} className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-amber-200 bg-amber-50 p-2 text-sm dark:border-amber-900 dark:bg-amber-950/40">
-                <span><b>{u.display_name ?? '—'}</b> <span className="text-xs text-slate-500">· {u.email} · {fmtDateTime(u.created_at)}</span></span>
+                <span className="min-w-0 break-all"><b>{u.display_name ?? '—'}</b> <span className="text-xs text-slate-500">· {u.email} · {fmtDateTime(u.created_at)}</span></span>
                 <span className="flex gap-2">
                   <button className="rounded-lg bg-brand-700 px-3 py-1 text-xs text-white" disabled={act.isPending} onClick={() => act.mutate({ id: u.id, action: 'approve' })}>Aprobar</button>
                   <button className="rounded-lg border px-3 py-1 text-xs" disabled={act.isPending} onClick={() => { if (confirm(`¿Rechazar la solicitud de ${u.display_name ?? u.email}?`)) act.mutate({ id: u.id, action: 'reject' }) }}>Rechazar</button>
@@ -131,29 +131,38 @@ function QuinielaUsers({ token }: { token: string }) {
           <div className="space-y-2">
             <h4 className="text-xs font-semibold uppercase tracking-wide text-slate-500">Participantes ({approved.length})</h4>
             {!approved.length ? <Empty>Todavía no apruebas a nadie.</Empty> : (
-              <table className="w-full min-w-[600px] text-xs">
-                <thead className="text-slate-500"><tr><th className="text-left">Nombre</th><th className="text-left">Correo</th><th>Pronósticos</th><th className="text-left">Último ingreso</th><th /></tr></thead>
-                <tbody>{approved.map((u) => (
-                  <tr key={u.id} className="border-t border-slate-100 dark:border-slate-800">
-                    <td className="py-1 font-medium">{u.display_name ?? '—'}</td><td>{u.email}</td>
-                    <td className="text-center">{u.picks}</td><td>{fmtDateTime(u.last_login_at)}</td>
-                    <td className="space-x-2 text-right">
-                      <button className="underline" onClick={() => makeLink.mutate(u)}>Enlace de contraseña</button>
-                      <button className="text-red-700 underline" onClick={() => { if (confirm(`¿Sacar a ${u.display_name ?? u.email} de la quiniela y borrar sus pronósticos?`)) act.mutate({ id: u.id, action: 'delete' }) }}>Borrar</button>
-                    </td>
-                  </tr>))}</tbody>
-              </table>)}
+              <div className="divide-y divide-slate-100 text-sm dark:divide-slate-800">{approved.map((u) => (
+                <div key={u.id} className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 py-2">
+                  <div className="min-w-0">
+                    <b>{u.display_name ?? '—'}</b>
+                    <div className="break-all text-xs text-slate-500">{u.email} · {u.picks} pronósticos · último ingreso: {fmtDateTime(u.last_login_at)}</div>
+                  </div>
+                  <span className="flex gap-3 text-xs">
+                    <button className="underline" onClick={() => makeLink.mutate(u)}>Enlace de contraseña</button>
+                    <button className="text-red-700 underline" onClick={() => { if (confirm(`¿Sacar a ${u.display_name ?? u.email} de la quiniela y borrar sus pronósticos?`)) act.mutate({ id: u.id, action: 'delete' }) }}>Borrar</button>
+                  </span>
+                </div>))}
+              </div>)}
           </div>
         </>
       )}
       {link && (
         <div className="rounded-lg bg-slate-50 p-2 text-xs dark:bg-slate-800/50">
           Enlace para que <b>{link.name}</b> elija una contraseña nueva (sirve 24 horas, una sola vez). Mándaselo por WhatsApp:
-          <input readOnly value={link.link} onFocus={(e) => e.target.select()} className="mt-1 w-full rounded border px-2 py-1 font-mono dark:bg-slate-900" />
+          <div className="mt-1 flex gap-2">
+            <input readOnly value={link.link} onFocus={(e) => e.target.select()} className="min-w-0 flex-1 rounded border px-2 py-1 font-mono dark:bg-slate-900" />
+            <CopyButton text={link.link} />
+          </div>
         </div>
       )}
       {(act.error || makeLink.error) && <ErrorBox error={act.error ?? makeLink.error} />}
       <p className="text-xs text-slate-500">Si alguien olvida su contraseña, genera aquí su enlace y mándaselo. Las solicitudes nuevas se revisan cada 30 segundos.</p>
     </Card>
   )
+}
+
+function CopyButton({ text }: { text: string }) {
+  const [done, setDone] = useState(false)
+  const copy = () => navigator.clipboard?.writeText(text).then(() => { setDone(true); setTimeout(() => setDone(false), 2000) }, () => {})
+  return <button type="button" onClick={copy} className="shrink-0 rounded-lg bg-brand-700 px-3 py-1 text-white">{done ? 'Copiado ✓' : 'Copiar'}</button>
 }
