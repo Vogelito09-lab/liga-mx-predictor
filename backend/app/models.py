@@ -258,8 +258,12 @@ class User(Base):
     email_verified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     # Cada persona pide entrar y el administrador la aprueba. Sin aprobar no puede iniciar sesión.
     approved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # Escudo de un equipo como foto de perfil (se pueden repetir).
+    crest_team_id: Mapped[int | None] = mapped_column(ForeignKey("teams.id", ondelete="SET NULL"))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
     last_login_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+    crest_team: Mapped[Team | None] = relationship()
 
 
 class UserSession(Base):

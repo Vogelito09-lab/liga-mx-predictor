@@ -81,7 +81,10 @@ export interface JobRun { id: number; job: string; trigger: string; status: stri
 export interface Issue { id: number; match_id: number | null; source: string; source_key: string | null; severity: string; code: string; message: string; details: unknown; created_at: string }
 
 // ---- Quiniela ----
-export interface AuthUser { id: number; email: string; display_name: string | null; email_verified: boolean; approved: boolean }
+export interface Crest { team_id: number; name: string; logo_url: string | null }
+export interface AuthUser {
+  id: number; email: string; display_name: string | null; email_verified: boolean; approved: boolean; crest: Crest | null
+}
 export interface AuthResult { token: string | null; user: AuthUser }
 export interface AuthConfig { registration_open: boolean; invite_code_required: boolean; email_enabled: boolean }
 export interface MessageResult { ok: boolean; email_sent: boolean; message: string; email_enabled?: boolean }
@@ -96,7 +99,7 @@ export interface QJornadas {
 }
 export type PickKind = 'exacto' | 'resultado' | 'fallo'
 export interface QPick { home: number; away: number; points: number | null; kind: PickKind | null }
-export interface QOtherPick extends QPick { display_name: string; is_me: boolean }
+export interface QOtherPick extends QPick { display_name: string; is_me: boolean; crest_url: string | null }
 export interface QMatch {
   id: number; kickoff_utc: string; status: MatchStatus; status_detail: string | null; live_clock: string | null
   stage: string; stage_detail: string | null; round: number | null; home: Team; away: Team
@@ -109,7 +112,8 @@ export interface QItem {
 }
 export interface QJornadaDetail { tournament: string; key: string; label: string; liguilla: boolean; items: QItem[] }
 export interface QRow {
-  position: number; user_id: number | null; display_name: string; is_model: boolean; points: number; exact: number
+  position: number; user_id: number | null; display_name: string; crest_url: string | null; is_model: boolean
+  points: number; exact: number
   outcome: number; scored_picks: number; pending_picks: number; jornadas_won: number; by_jornada: Record<string, number>
 }
 export interface QJornadaTable {

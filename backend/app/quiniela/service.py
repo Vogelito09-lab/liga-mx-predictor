@@ -194,6 +194,7 @@ class Row:
     user_id: int | None
     display_name: str
     is_model: bool = False
+    crest_url: str | None = None
     points: int = 0
     exact: int = 0
     outcome: int = 0
@@ -221,6 +222,7 @@ def _rank(rows: list[Row]) -> list[dict]:
         if (r.points, r.exact) != prev:
             pos, prev = i, (r.points, r.exact)
         out.append({"position": pos, "user_id": r.user_id, "display_name": r.display_name, "is_model": r.is_model,
+                    "crest_url": r.crest_url,
                     "points": r.points, "exact": r.exact, "outcome": r.outcome, "scored_picks": r.scored_picks,
                     "pending_picks": r.pending_picks, "jornadas_won": r.jornadas_won, "by_jornada": r.by_jornada})
     return out
@@ -242,11 +244,12 @@ def build_tables(session: Session, tournament: str, now: datetime) -> dict:
     picks = user_picks(session, match_ids, [u.id for u in users])
     bot = model_picks(session, match_ids)
 
-    general = {u.id: Row(u.id, u.display_name) for u in users}
+    crest = {u.id: u.crest_team.logo_url if u.crest_team else None for u in users}
+    general = {u.id: Row(u.id, u.display_name, crest_url=crest[u.id]) for u in users}
     general_model = Row(None, MODEL_NAME, is_model=True)
     jornadas = []
     for j, ms in groups:
-        rows = {u.id: Row(u.id, u.display_name) for u in users}
+        rows = {u.id: Row(u.id, u.display_name, crest_url=crest[u.id]) for u in users}
         model_row = Row(None, MODEL_NAME, is_model=True)
         for mt in ms:
             for u in users:

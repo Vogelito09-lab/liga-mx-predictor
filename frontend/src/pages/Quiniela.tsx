@@ -1,15 +1,17 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState, type FormEvent, type ReactNode } from 'react'
+import { Link } from 'react-router-dom'
+import { Avatar } from '../components/Avatar'
+import { CrestPicker } from '../components/CrestPicker'
 import { StatusBadge } from '../components/MatchCard'
+import { Alert, Ok, input, primary } from '../components/quiniela-ui'
 import { TeamLogo } from '../components/TeamLogo'
 import { Badge, Card, Empty, ErrorBox, Loading, SectionTitle, Select } from '../components/ui'
 import { quiniela } from '../lib/api'
 import { useAuth } from '../lib/auth'
 import { fmtDateTime } from '../lib/format'
-import type { AuthUser, QItem, QPick, QRow } from '../lib/types'
+import type { QItem, QPick, QRow } from '../lib/types'
 
-const input = 'w-full rounded-lg border border-slate-300 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900'
-const primary = 'rounded-lg bg-brand-700 px-4 py-2 text-sm font-medium text-white hover:bg-brand-600 disabled:opacity-50'
 const KIND_TONE = { exacto: 'green', resultado: 'blue', fallo: 'slate' } as const
 const KIND_LABEL = { exacto: 'Exacto', resultado: 'Ganador', fallo: 'Fallo' }
 
@@ -19,9 +21,9 @@ export function Quiniela() {
   if (loading) return <Loading />
   return (
     <div className="space-y-6">
-      <SectionTitle right={user?.display_name ? <UserMenu user={user} /> : undefined}>Quiniela</SectionTitle>
+      <SectionTitle right={user?.display_name ? <Link className="text-sm text-slate-500 underline" to="/quiniela/perfil">Mi perfil</Link> : undefined}>Quiniela</SectionTitle>
       <Rules />
-      {!user ? <AuthPanel /> : !user.display_name ? <ChooseName first /> : null}
+      {!user ? <AuthPanel /> : !user.display_name ? <ChooseName /> : null}
       <div className="flex gap-1 text-sm" role="tablist">
         {([['picks', 'Mis pronósticos'], ['jornada', 'Tabla de la jornada'], ['general', 'Tabla general']] as const).map(([k, label]) => (
           <button key={k} role="tab" aria-selected={tab === k} onClick={() => setTab(k)}
@@ -49,57 +51,25 @@ function Rules() {
 // ---------------------------------------------------------------------------------------------------
 // Cuenta
 // ---------------------------------------------------------------------------------------------------
-function UserMenu({ user }: { user: AuthUser }) {
-  const { signOut } = useAuth()
-  const [open, setOpen] = useState<'name' | 'password' | null>(null)
-  return (
-    <div className="flex flex-col items-end gap-2 text-sm">
-      <div className="flex flex-wrap items-center gap-3">
-        <span>Hola, <b>{user.display_name}</b></span>
-        <button className="text-slate-500 underline" onClick={() => setOpen(open === 'name' ? null : 'name')}>Cambiar nombre</button>
-        <button className="text-slate-500 underline" onClick={() => setOpen(open === 'password' ? null : 'password')}>Cambiar contraseña</button>
-        <button className="text-slate-500 underline" onClick={signOut}>Salir</button>
-      </div>
-      {open === 'name' && <ChooseName onDone={() => setOpen(null)} />}
-      {open === 'password' && <ChangePassword onDone={() => setOpen(null)} />}
-    </div>
-  )
-}
-
-function ChooseName({ first = false, onDone }: { first?: boolean; onDone?: () => void }) {
+/** Primera vez que entra alguien sin nombre: nombre y escudo. Después se cambian en Mi perfil. */
+function ChooseName() {
   const { token, user, setUser } = useAuth()
   const [name, setName] = useState(user?.display_name ?? '')
+  const [crest, setCrest] = useState<number | null>(user?.crest?.team_id ?? null)
   const save = useMutation({
-    mutationFn: () => quiniela.setName(token!, name),
-    onSuccess: (u) => { setUser(u); onDone?.() },
+    mutationFn: () => quiniela.updateProfile(token!, { display_name: name, crest_team_id: crest }),
+    onSuccess: setUser,
   })
   return (
-    <Card className="w-full max-w-md space-y-3">
-      <h3 className="font-semibold">{first ? '¿Con qué nombre quieres aparecer?' : 'Cambiar nombre'}</h3>
+    <Card className="w-full max-w-xl space-y-3">
+      <h3 className="font-semibold">¿Con qué nombre quieres aparecer?</h3>
       <p className="text-sm text-slate-500">Es el nombre que verán todos en las tablas (tu correo nunca se muestra). De 3 a 20 letras o números.</p>
-      <form className="flex gap-2" onSubmit={(e) => { e.preventDefault(); save.mutate() }}>
+      <form className="space-y-3" onSubmit={(e) => { e.preventDefault(); save.mutate() }}>
         <input className={input} value={name} onChange={(e) => setName(e.target.value)} maxLength={20} placeholder="Tu nombre" autoFocus />
+        <p className="text-sm text-slate-500">Elige tu escudo (tu foto de perfil; lo puedes cambiar cuando quieras):</p>
+        <CrestPicker value={crest} onChange={setCrest} />
         <button className={primary} disabled={save.isPending || name.trim().length < 3}>Guardar</button>
       </form>
-      {save.error && <Alert>{save.error.message}</Alert>}
-    </Card>
-  )
-}
-
-function ChangePassword({ onDone }: { onDone: () => void }) {
-  const { token } = useAuth()
-  const [current, setCurrent] = useState('')
-  const [next, setNext] = useState('')
-  const save = useMutation({ mutationFn: () => quiniela.changePassword(token!, current, next), onSuccess: () => setTimeout(onDone, 1500) })
-  return (
-    <Card className="w-full max-w-md space-y-3">
-      <h3 className="font-semibold">Cambiar contraseña</h3>
-      <form className="space-y-2" onSubmit={(e) => { e.preventDefault(); save.mutate() }}>
-        <input className={input} type="password" value={current} onChange={(e) => setCurrent(e.target.value)} placeholder="Contraseña actual" autoComplete="current-password" />
-        <input className={input} type="password" value={next} onChange={(e) => setNext(e.target.value)} placeholder="Nueva contraseña (mínimo 8)" autoComplete="new-password" />
-        <button className={primary} disabled={save.isPending}>Cambiar</button>
-      </form>
-      {save.isSuccess && <Ok>Listo, tu contraseña cambió.</Ok>}
       {save.error && <Alert>{save.error.message}</Alert>}
     </Card>
   )
@@ -160,8 +130,9 @@ function RegisterForm({ codeRequired }: { codeRequired: boolean }) {
   const [password, setPassword] = useState('')
   const [password2, setPassword2] = useState('')
   const [code, setCode] = useState('')
+  const [crest, setCrest] = useState<number | null>(null)
   const [localError, setLocalError] = useState('')
-  const reg = useMutation({ mutationFn: () => quiniela.register(name, email, password, code) })
+  const reg = useMutation({ mutationFn: () => quiniela.register(name, email, password, code, crest) })
   const submit = (e: FormEvent) => {
     e.preventDefault()
     if (password !== password2) { setLocalError('Las contraseñas no coinciden'); return }
@@ -175,6 +146,8 @@ function RegisterForm({ codeRequired }: { codeRequired: boolean }) {
       <input className={input} type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Correo (para entrar; nadie más lo ve)" autoComplete="email" required />
       <input className={input} type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Contraseña (mínimo 8 caracteres)" autoComplete="new-password" minLength={8} required />
       <input className={input} type="password" value={password2} onChange={(e) => setPassword2(e.target.value)} placeholder="Repite la contraseña" autoComplete="new-password" required />
+      <p className="text-sm text-slate-500">Elige tu escudo (será tu foto de perfil; lo puedes cambiar después):</p>
+      <CrestPicker value={crest} onChange={setCrest} />
       {codeRequired && <input className={input} value={code} onChange={(e) => setCode(e.target.value)} placeholder="Código de invitación" autoComplete="off" required />}
       <p className="text-xs text-slate-500">Tu solicitud le llega al organizador de la quiniela. Cuando te apruebe ya podrás entrar con tu correo y contraseña.</p>
       <button className={primary} disabled={reg.isPending}>Pedir acceso</button>
@@ -200,13 +173,6 @@ function ForgotForm({ onBack }: { onBack: () => void }) {
       {forgot.error && <Alert>{forgot.error.message}</Alert>}
     </form>
   )
-}
-
-export function Alert({ children }: { children: ReactNode }) {
-  return <p role="alert" className="rounded-lg bg-red-50 p-2 text-sm text-red-800 dark:bg-red-950 dark:text-red-200">{children}</p>
-}
-export function Ok({ children }: { children: ReactNode }) {
-  return <p className="rounded-lg bg-emerald-50 p-2 text-sm text-emerald-800 dark:bg-emerald-950 dark:text-emerald-200">{children}</p>
 }
 
 // ---------------------------------------------------------------------------------------------------
@@ -350,6 +316,7 @@ function PickRow({ it, canPlay, value, onChange }: { it: QItem; canPlay: boolean
         <div className="flex flex-wrap gap-2">
           {it.picks.map((p) => (
             <Badge key={p.display_name} tone={p.kind ? KIND_TONE[p.kind] : 'slate'}>
+              <span className="mr-1 inline-flex align-middle"><Avatar name={p.display_name} crestUrl={p.crest_url} size={16} /></span>
               {p.is_me ? <b>{p.display_name}</b> : p.display_name}: {p.home}–{p.away}{p.points !== null ? ` · ${p.points}` : ''}
             </Badge>
           ))}
@@ -431,7 +398,12 @@ function RankTable({ rows, general = false }: { rows: QRow[]; general?: boolean 
             return (
               <tr key={r.user_id ?? 'modelo'} className={`border-t border-slate-100 dark:border-slate-800 ${me ? 'bg-brand-50 font-semibold dark:bg-brand-700/20' : ''} ${r.is_model ? 'text-slate-500' : ''}`}>
                 <td className="p-2">{r.position}</td>
-                <td className="p-2">{r.display_name}{me && ' (tú)'}{r.is_model && <span className="ml-1"><Badge tone="blue">virtual</Badge></span>}</td>
+                <td className="p-2">
+                  <span className="flex items-center gap-2">
+                    <Avatar name={r.display_name} crestUrl={r.crest_url} isModel={r.is_model} />
+                    <span>{r.display_name}{me && ' (tú)'}{r.is_model && <span className="ml-1"><Badge tone="blue">virtual</Badge></span>}</span>
+                  </span>
+                </td>
                 <td className="p-2 text-center text-base font-bold">{r.points}</td>
                 <td className="p-2 text-center">{r.exact}</td>
                 <td className="p-2 text-center">{r.outcome}</td>

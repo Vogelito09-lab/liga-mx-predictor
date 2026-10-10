@@ -129,9 +129,22 @@ def _start_session(session: Session, user: m.User) -> str:
     return token
 
 
+def crest_out(t: m.Team | None) -> dict | None:
+    return {"team_id": t.id, "name": t.name, "logo_url": t.logo_url} if t else None
+
+
 def user_out(u: m.User) -> dict:
     return {"id": u.id, "email": u.email, "display_name": u.display_name,
-            "email_verified": u.email_verified_at is not None, "approved": u.approved_at is not None}
+            "email_verified": u.email_verified_at is not None, "approved": u.approved_at is not None,
+            "crest": crest_out(u.crest_team)}
+
+
+def _check_crest(session: Session, team_id: int | None) -> int | None:
+    if team_id is None:
+        return None
+    if session.get(m.Team, team_id) is None:
+        raise HTTPException(422, "Ese escudo no existe")
+    return team_id
 
 
 def _check_can_enter(user: m.User) -> None:
@@ -203,6 +216,7 @@ class RegisterIn(BaseModel):
     email: str = Field(max_length=254)
     password: str = Field(max_length=200)
     invite_code: str = Field("", max_length=100)
+    crest_team_id: int | None = None
 
 
 class LoginIn(BaseModel):
@@ -223,8 +237,10 @@ class ResetIn(BaseModel):
     password: str = Field(max_length=200)
 
 
-class NameIn(BaseModel):
-    display_name: str = Field(max_length=60)
+class ProfileIn(BaseModel):
+    """Solo se cambian los campos que se envían."""
+    display_name: str | None = Field(None, max_length=60)
+    crest_team_id: int | None = None
 
 
 class PasswordChangeIn(BaseModel):
@@ -254,10 +270,11 @@ def register(body: RegisterIn, session: DB, request: Request):
     if problem := sec.password_problem(body.password):
         raise HTTPException(422, problem)
     name, key = _check_name(session, body.display_name)
+    crest = _check_crest(session, body.crest_team_id)
     if session.scalar(select(m.User.id).where(m.User.email == email)):
         raise HTTPException(409, "Ese correo ya está registrado. Inicia sesión o recupera tu contraseña.")
     user = m.User(email=email, password_hash=sec.hash_password(body.password), display_name=name,
-                  display_name_key=key, created_at=_now())
+                  display_name_key=key, crest_team_id=crest, created_at=_now())
     session.add(user)
     try:
         session.commit()
@@ -321,15 +338,30 @@ def me(user: CurrentUser):
 
 
 @auth.put("/me")
-def set_name(body: NameIn, user: CurrentUser, session: DB):
-    name, key = _check_name(session, body.display_name, user.id)
-    user.display_name, user.display_name_key = name, key
+def update_profile(body: ProfileIn, user: CurrentUser, session: DB):
+    if body.display_name is not None:
+        name, key = _check_name(session, body.display_name, user.id)
+        user.display_name, user.display_name_key = name, key
+    if "crest_team_id" in body.model_fields_set:
+        user.crest_team_id = _check_crest(session, body.crest_team_id)
     try:
         session.commit()
     except IntegrityError:
         session.rollback()
         raise HTTPException(409, "Ese nombre ya lo usa otra persona. Elige otro.")
     return user_out(user)
+
+
+@auth.get("/crests")
+def crests(session: DB):
+    """Escudos para elegir: los equipos del torneo en curso."""
+    t = current_tournament(session)
+    q_ = select(m.Team).order_by(m.Team.name)
+    if t:
+        ids = select(m.Match.home_team_id).where(m.Match.tournament == t).union(
+            select(m.Match.away_team_id).where(m.Match.tournament == t))
+        q_ = q_.where(m.Team.id.in_(ids))
+    return [crest_out(team) for team in session.scalars(q_)]
 
 
 @auth.post("/change-password")
@@ -430,6 +462,7 @@ def jornada_detail(key: str, session: DB, user: OptionalUser, tournament: str | 
     picks = q.user_picks(session, ids)
     bot = q.model_picks(session, ids)
     names = {u.id: u.display_name for u in users}
+    crest_urls = {u.id: u.crest_team.logo_url if u.crest_team else None for u in users}
     items = []
     for mt in ms:
         locked = q.is_locked(mt, now)
@@ -440,7 +473,8 @@ def jornada_detail(key: str, session: DB, user: OptionalUser, tournament: str | 
             for (uid, mid), p in picks.items():
                 if mid == mt.id and uid in names:
                     res = q.score_match(mt, p.home_goals, p.away_goals)
-                    others.append({"display_name": names[uid], "is_me": bool(user and uid == user.id),
+                    others.append({"display_name": names[uid], "crest_url": crest_urls[uid],
+                                   "is_me": bool(user and uid == user.id),
                                    "home": p.home_goals, "away": p.away_goals,
                                    "points": res[0] if res else None, "kind": res[1] if res else None})
             others.sort(key=lambda o: o["display_name"].lower())
