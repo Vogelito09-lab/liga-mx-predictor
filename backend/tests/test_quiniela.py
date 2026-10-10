@@ -41,6 +41,23 @@ def test_jornada_of_liguilla_rounds():
     assert jornada_of(mk("play-in", "Play-In")).key == "playin"
 
 
+def test_rescheduled_match_goes_to_the_week_it_is_played():
+    from app.quiniela.service import group_jornadas
+
+    base = datetime(2026, 9, 26, 1, 0, tzinfo=timezone.utc)
+
+    def mk(i, rnd, days):
+        return m.Match(id=i, stage="regular", round=rnd, kickoff_utc=base + timedelta(days=days))
+    j10 = [mk(i, 10, i * 0.5) for i in range(1, 9)]
+    j11 = [mk(10 + i, 11, 14 + i * 0.5) for i in range(1, 9)]
+    moved = mk(99, 10, 15.1)  # partido de la jornada 10 reprogramado a la semana de la 11
+    lonely = mk(98, 10, 30)  # reprogramado a una fecha sin jornada: va a la más cercana
+    groups = {j.key: [mt.id for mt in ms] for j, ms in group_jornadas([*j10, *j11, moved, lonely])}
+    assert 99 in groups["J11"] and 99 not in groups["J10"]
+    assert 98 in groups["J11"]
+    assert len(groups["J10"]) == 8 and len(groups["J11"]) == 10
+
+
 def test_password_hash_and_names():
     h = security.hash_password("secreto123")
     assert "secreto123" not in h

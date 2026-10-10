@@ -17,7 +17,7 @@ from __future__ import annotations
 
 from collections import defaultdict
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session, joinedload
@@ -102,10 +102,49 @@ def tournament_matches(session: Session, tournament: str) -> list[m.Match]:
     return [r for r in rows if jornada_of(r) is not None]
 
 
+CORE_WINDOW = timedelta(days=3)
+
+
+def week_rounds(matches: list[m.Match]) -> dict[int, int]:
+    """Jornada de la quiniela de cada partido de fase regular: la de la semana en que se juega.
+
+    La jornada calculada (`Match.round`) deja un partido reprogramado en su jornada original aunque se juegue
+    semanas después. Para la quiniela cuenta cuándo se juega: cada jornada ocupa la ventana de fechas de la
+    mayoría de sus partidos (los que caen a 3 días o menos de su fecha mediana) y un partido fuera de su
+    ventana pasa a la jornada en cuya ventana cae; si no cae en ninguna, a la de fecha mediana más cercana.
+    """
+    by_round: dict[int, list[m.Match]] = defaultdict(list)
+    for mt in matches:
+        if mt.stage == "regular" and mt.round:
+            by_round[mt.round].append(mt)
+    medians, windows = {}, {}
+    for rnd, ms in by_round.items():
+        kicks = sorted(mt.kickoff_utc for mt in ms)
+        med = kicks[len(kicks) // 2]
+        core = [k for k in kicks if abs(k - med) <= CORE_WINDOW]
+        medians[rnd], windows[rnd] = med, (core[0], core[-1])
+    out = {}
+    for rnd, ms in by_round.items():
+        lo, hi = windows[rnd]
+        for mt in ms:
+            k = mt.kickoff_utc
+            if lo <= k <= hi:
+                out[mt.id] = rnd
+                continue
+            inside = [r for r, (a, b) in windows.items() if a <= k <= b]
+            out[mt.id] = min(inside or medians, key=lambda r: abs(medians[r] - k))
+    return out
+
+
 def group_jornadas(matches: list[m.Match]) -> list[tuple[Jornada, list[m.Match]]]:
+    weeks = week_rounds(matches)
     groups: dict[Jornada, list[m.Match]] = defaultdict(list)
     for mt in matches:
-        groups[jornada_of(mt)].append(mt)
+        rnd = weeks.get(mt.id)
+        j = Jornada(f"J{rnd}", f"Jornada {rnd}", rnd, False) if rnd else jornada_of(mt)
+        groups[j].append(mt)
+    for ms in groups.values():
+        ms.sort(key=lambda mt: (mt.kickoff_utc, mt.id))
     return sorted(groups.items(), key=lambda kv: kv[0].order)
 
 
