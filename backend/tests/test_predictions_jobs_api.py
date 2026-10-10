@@ -279,3 +279,20 @@ def test_crosscheck_flags_discrepancies(session):
     assert res == {"rows": 2, "matched": 2, "mismatched": 1, "unmatched": 0, "parse_problems": []}
     issue = session.scalar(select(m.DataIssue).where(m.DataIssue.code == "crosscheck_mismatch"))
     assert issue.source == "football-data" and issue.details["football_data"] == [1, 0]
+
+
+def test_stale_depends_on_match_window(session, monkeypatch):
+    from app.api import main as api
+    from app.ingest.loader import set_state
+
+    monkeypatch.setattr(api, "_now", lambda: NOW)
+    set_state(session, "sync", {"last_success": (NOW - timedelta(hours=2)).isoformat()})
+    load_events(session, [future_fixture("w1", 1, 2, NOW + timedelta(days=2))], NOW)
+    session.commit()
+    c = TestClient(app)
+    # sin partidos en juego: la sincronización de cada 6 h basta
+    assert c.get("/api/updates/status", params={"sync_if_stale": False}).json()["is_stale"] is False
+    # con un partido que ya debió empezar, 2 h sin sincronizar sí es atraso
+    load_events(session, [future_fixture("w2", 3, 4, NOW - timedelta(minutes=30))], NOW - timedelta(hours=1))
+    session.commit()
+    assert c.get("/api/updates/status", params={"sync_if_stale": False}).json()["is_stale"] is True

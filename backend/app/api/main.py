@@ -164,12 +164,16 @@ def updates_status(session: DB, sync_if_stale: bool = True):
     sync = get_state(session, "sync", {})
     version = int(get_state(session, "data_version", {"version": 0}).get("version", 0))
     last_ok = datetime.fromisoformat(sync["last_success"]) if sync.get("last_success") else None
-    stale = last_ok is None or now - last_ok > timedelta(minutes=settings.stale_after_minutes)
     live = session.scalar(select(func.count()).select_from(m.Match).where(m.Match.status == m.IN_PROGRESS)) or 0
     # ventana de partido: alguno en juego o alguno que debió empezar en las últimas 3 h sin finalizar
     recent = session.scalar(select(func.count()).select_from(m.Match).where(
         m.Match.status.in_([m.SCHEDULED, m.IN_PROGRESS]),
         m.Match.kickoff_utc <= now, m.Match.kickoff_utc >= now - timedelta(hours=3))) or 0
+    # Con partidos en juego se sincroniza cada 10 min; fuera de esa ventana solo cada 6 h (calendario), así
+    # que los datos solo se consideran atrasados si pasó más que eso.
+    limit = (timedelta(minutes=settings.stale_after_minutes) if live or recent
+             else timedelta(minutes=settings.stale_after_minutes_idle))
+    stale = last_ok is None or now - last_ok > limit
     message = _maybe_sync_on_visit(stale, bool(live or recent)) if sync_if_stale else None
     nxt = session.scalar(select(func.min(m.Match.kickoff_utc)).where(m.Match.status == m.SCHEDULED,
                                                                       m.Match.kickoff_utc > now))

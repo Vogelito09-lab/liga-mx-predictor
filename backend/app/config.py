@@ -26,6 +26,8 @@ class Settings(BaseSettings):
     sync_days_ahead: int = 60  # cubre el calendario hasta el final de la fase regular
     # Si la última sincronización es más antigua que esto, la API lo indica como "datos atrasados".
     stale_after_minutes: int = 30
+    # Sin partidos en juego la sincronización completa corre cada 6 h (GitHub puede retrasarla un poco).
+    stale_after_minutes_idle: int = 7 * 60
 
     @field_validator("database_url")
     @classmethod
