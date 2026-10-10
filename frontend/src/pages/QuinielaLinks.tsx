@@ -4,7 +4,7 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { Card, Loading, SectionTitle } from '../components/ui'
 import { quiniela } from '../lib/api'
 import { useAuth } from '../lib/auth'
-import { Alert, Ok } from './Quiniela'
+import { Alert, Ok } from '../components/quiniela-ui'
 
 /** Página a la que lleva el enlace del correo de confirmación. */
 export function ConfirmEmail() {

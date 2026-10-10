@@ -29,12 +29,16 @@ automática, así que las tablas se actualizan solas y una corrección de la fue
 
 ## Cuentas: el organizador aprueba a cada persona
 
-1. En **Quiniela → Pedir acceso** la persona escribe su nombre (el que verán todos), su correo y una contraseña.
+1. En **Quiniela → Pedir acceso** la persona escribe su nombre (el que verán todos), su correo, una contraseña y, si quiere, el escudo de su equipo.
 2. La solicitud aparece en **Administración → Quiniela: solicitudes y participantes** (entras con el `ADMIN_TOKEN`).
 3. El organizador da clic en **Aprobar** o **Rechazar**. Sin aprobar nadie puede entrar ni pronosticar.
 4. Ya aprobada, la persona entra con su correo y contraseña. El correo nunca se muestra en las tablas.
 
 - Nombres únicos (sin distinguir mayúsculas ni acentos); se pueden cambiar después.
+- **Escudo (foto de perfil)**: cada quien elige el escudo de un equipo de la Liga MX actual (se pueden repetir).
+  Sale junto a su nombre en las tablas y en los pronósticos. Sin escudo se muestra un círculo con su inicial. El modelo (participante virtual) tiene un robot como avatar.
+- **Panel arriba a la derecha**: nombre y escudo de quien entró; al darle clic muestra sus puntos y su lugar en
+  la tabla general, **Mi perfil** (`/quiniela/perfil`: cambiar nombre, escudo y contraseña) y **Cerrar sesión**.
 - **Olvidó su contraseña**: en Administración, botón **Enlace de contraseña** junto a su nombre. El enlace
   sirve 24 horas y una sola vez; se manda por WhatsApp.
 - **Borrar**: saca a la persona de la quiniela junto con sus pronósticos.
@@ -61,13 +65,14 @@ septiembre de 2025, por eso no se puede usar Gmail directo.
 | Método y ruta | Descripción |
 |---|---|
 | `GET /api/auth/config` | Si el registro está abierto y si hay correos |
-| `POST /api/auth/register` | Pedir acceso: `display_name`, `email`, `password` (`invite_code` si se configuró) |
+| `POST /api/auth/register` | Pedir acceso: `display_name`, `email`, `password`, `crest_team_id` opcional (`invite_code` si se configuró) |
 | `POST /api/auth/verify` | `token` del correo (solo con correos activados) |
 | `POST /api/auth/resend-verification` | `email` |
 | `POST /api/auth/login` | `email`, `password` → `token` de sesión (60 días). 423 si falta la aprobación |
 | `POST /api/auth/logout` 👤 | Cierra la sesión |
 | `GET /api/auth/me` 👤 | Usuario actual |
-| `PUT /api/auth/me` 👤 | `display_name` |
+| `PUT /api/auth/me` 👤 | `display_name` y/o `crest_team_id` (lo que no se envía no cambia; `null` quita el escudo) |
+| `GET /api/auth/crests` | Escudos que se pueden elegir (equipos del torneo actual) |
 | `POST /api/auth/change-password` 👤 | `current_password`, `new_password` |
 | `POST /api/auth/forgot-password` | `email` |
 | `POST /api/auth/reset-password` | `token`, `password` |

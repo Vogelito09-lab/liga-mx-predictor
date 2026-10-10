@@ -1,4 +1,4 @@
-import type { AdminUsers, AuthConfig, AuthResult, AuthUser, Issue, JobRun, Match, MetricsResponse, MessageResult, Paginated, Prediction, QJornadaDetail, QJornadas, QTables, SeasonRow, Standings, Status, Team, TeamStats } from './types'
+import type { AdminUsers, AuthConfig, AuthResult, AuthUser, Crest, Issue, JobRun, Match, MetricsResponse, MessageResult, Paginated, Prediction, QJornadaDetail, QJornadas, QTables, SeasonRow, Standings, Status, Team, TeamStats } from './types'
 
 // En producción VITE_API_URL apunta al backend (p. ej. https://ligamx-api.onrender.com).
 const BASE = (import.meta.env.VITE_API_URL ?? '').replace(/\/$/, '')
@@ -57,14 +57,17 @@ export const api = {
 /** Cuentas y quiniela. `token` es el de la sesión del usuario (no el de administración). */
 export const quiniela = {
   config: () => request<AuthConfig>('/api/auth/config'),
-  register: (display_name: string, email: string, password: string, invite_code: string) =>
-    request<MessageResult>('/api/auth/register', send('POST', { display_name, email, password, invite_code })),
+  crests: () => request<Crest[]>('/api/auth/crests'),
+  register: (display_name: string, email: string, password: string, invite_code: string, crest_team_id: number | null) =>
+    request<MessageResult>('/api/auth/register', send('POST', { display_name, email, password, invite_code, crest_team_id })),
   resendVerification: (email: string) => request<MessageResult>('/api/auth/resend-verification', send('POST', { email })),
   verify: (token: string) => request<AuthResult>('/api/auth/verify', send('POST', { token })),
   login: (email: string, password: string) => request<AuthResult>('/api/auth/login', send('POST', { email, password })),
   logout: (token: string) => request('/api/auth/logout', { method: 'POST', headers: bearer(token) }),
   me: (token: string) => request<AuthUser>('/api/auth/me', { headers: bearer(token) }),
-  setName: (token: string, display_name: string) => request<AuthUser>('/api/auth/me', send('PUT', { display_name }, token)),
+  /** Cambia el nombre y/o el escudo; lo que no se envía no cambia (`crest_team_id: null` quita el escudo). */
+  updateProfile: (token: string, changes: { display_name?: string; crest_team_id?: number | null }) =>
+    request<AuthUser>('/api/auth/me', send('PUT', changes, token)),
   changePassword: (token: string, current_password: string, new_password: string) =>
     request('/api/auth/change-password', send('POST', { current_password, new_password }, token)),
   forgotPassword: (email: string) => request<MessageResult>('/api/auth/forgot-password', send('POST', { email })),

@@ -2,6 +2,7 @@ import { NavLink, Outlet } from 'react-router-dom'
 import { fmtDateTime, fmtTime, relative } from '../lib/format'
 import { useLive } from '../lib/live'
 import { Badge } from './ui'
+import { UserPanel } from './UserPanel'
 
 const NAV = [
   { to: '/', label: 'Inicio' },
@@ -42,7 +43,10 @@ export function Layout() {
             <NavLink to="/" className="flex items-center gap-2 text-lg font-bold tracking-tight">
               <img src="/favicon.svg" alt="" width={24} height={24} /> Liga MX Predictor
             </NavLink>
-            <SyncIndicator />
+            <div className="flex flex-wrap items-center gap-3">
+              <SyncIndicator />
+              <UserPanel />
+            </div>
           </div>
           <nav className="-mx-1 flex gap-1 overflow-x-auto text-sm">
             {NAV.map((n) => (

@@ -279,3 +279,28 @@ def test_tiebreak_more_exact_scores(world):
     ranked = _rank([a, b, c_])
     assert [r["display_name"] for r in ranked] == ["B", "C", "A"]
     assert [r["position"] for r in ranked] == [1, 1, 3]
+
+
+def test_crest_profile_picture(world):
+    c = world["client"]
+    crests = c.get("/api/auth/crests").json()
+    assert crests and {"team_id", "name", "logo_url"} <= set(crests[0])
+    team = crests[0]["team_id"]
+    r = _request(c, "ana@x.com", "Ana", crest_team_id=team)
+    assert r.status_code == 201
+    assert _request(c, "b@x.com", "Beto", crest_team_id=999999).status_code == 422
+    c.post(f"/api/admin/quiniela/users/{_uid(c, 'ana@x.com')}/approve", headers=ADMIN)
+    h = {"Authorization": f"Bearer {c.post('/api/auth/login', json={'email': 'ana@x.com', 'password': 'clave-segura-1'}).json()['token']}"}
+    me = c.get("/api/auth/me", headers=h).json()
+    assert me["crest"]["team_id"] == team
+    # cambiar solo el escudo no toca el nombre; se puede repetir el de otra persona
+    other = crests[1]["team_id"]
+    me = c.put("/api/auth/me", json={"crest_team_id": other}, headers=h).json()
+    assert me["crest"]["team_id"] == other and me["display_name"] == "Ana"
+    beto = _signup(world, "beto@x.com", "Beto")
+    assert c.put("/api/auth/me", json={"crest_team_id": other}, headers=beto).json()["crest"]["team_id"] == other
+    rows = {r["display_name"]: r for r in c.get("/api/quiniela/tablas").json()["rows"]}
+    assert rows["Ana"]["crest_url"] == crests[1]["logo_url"]
+    assert rows["Modelo (IA)"]["crest_url"] is None
+    # quitarlo
+    assert c.put("/api/auth/me", json={"crest_team_id": None}, headers=h).json()["crest"] is None
