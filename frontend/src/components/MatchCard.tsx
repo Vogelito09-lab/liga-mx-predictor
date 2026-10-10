@@ -10,7 +10,7 @@ import { Badge, Card } from './ui'
 const UNC_TONE = { baja: 'green', media: 'amber', alta: 'red' } as const
 const OUTCOME_LABEL = { local: 'Victoria local', empate: 'Empate', visitante: 'Victoria visitante' }
 
-export function StatusBadge({ m }: { m: Match }) {
+export function StatusBadge({ m }: { m: Pick<Match, 'status' | 'live_clock' | 'extra_time'> }) {
   if (m.status === 'in_progress') return <Badge tone="live"><span className="size-1.5 animate-pulse rounded-full bg-white" />En juego {m.live_clock ?? ''}</Badge>
   if (m.status === 'finished') return <Badge tone="slate">Final{m.extra_time ? ' (tras prórroga)' : ''}</Badge>
   if (m.status === 'scheduled') return <Badge tone="blue">{STATUS_LABEL[m.status]}</Badge>

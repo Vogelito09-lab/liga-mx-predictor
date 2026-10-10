@@ -23,7 +23,7 @@ from app.ingest.loader import get_state
 from app.jobs import tasks
 from app.jobs.runner import run_job
 from app.predict.data import load_matches_df
-from app.predict.service import active_model, latest_backtest
+from app.predict.service import active_model, latest_backtest, latest_pre_kickoff
 from app.predict.standings import N_QUALIFY, current_tournament, regular_table, simulate_tournament
 
 log = logging.getLogger(__name__)
@@ -35,7 +35,7 @@ app = FastAPI(
     description="Predicciones probabilísticas de la Liga MX. Las predicciones expresan incertidumbre: "
                 "no son resultados garantizados. Datos de partidos: ESPN (API pública).",
 )
-app.add_middleware(CORSMiddleware, allow_origins=settings.cors_origin_list, allow_methods=["GET", "POST"],
+app.add_middleware(CORSMiddleware, allow_origins=settings.cors_origin_list, allow_methods=["GET", "POST", "PUT"],
                    allow_headers=["Authorization", "Content-Type"])
 
 OUTCOMES = ["local", "empate", "visitante"]
@@ -83,21 +83,6 @@ def prediction_out(p: m.Prediction, final: bool) -> PredictionOut:
         top_score_prob=p.top_score_prob, top_scores=p.top_scores, uncertainty=p.uncertainty, entropy=p.entropy,
         factors=p.factors, is_pre_kickoff_final=final,
     )
-
-
-def latest_pre_kickoff(session: Session, match_ids: list[int]) -> dict[int, m.Prediction]:
-    """Última predicción generada ANTES del inicio de cada partido (la que cuenta para evaluar)."""
-    if not match_ids:
-        return {}
-    sub = (select(m.Prediction.match_id, func.max(m.Prediction.generated_at).label("g"))
-           .join(m.Match, m.Match.id == m.Prediction.match_id)
-           .where(m.Prediction.match_id.in_(match_ids), m.Prediction.generated_at < m.Match.kickoff_utc)
-           .group_by(m.Prediction.match_id).subquery())
-    rows = session.scalars(
-        select(m.Prediction).options(joinedload(m.Prediction.model_version))
-        .join(sub, and_(m.Prediction.match_id == sub.c.match_id, m.Prediction.generated_at == sub.c.g))
-    ).all()
-    return {p.match_id: p for p in rows}
 
 
 def match_out(mt: m.Match, pred: m.Prediction | None) -> MatchOut:
@@ -493,3 +478,13 @@ def admin_retrain():
 @app.post("/api/admin/backtest", tags=["admin"], dependencies=[Depends(require_admin)], status_code=202)
 def admin_backtest():
     return _start_background("backtest", tasks.backtest)
+
+
+# ---------------------------------------------------------------------------------------------------
+# Quiniela (cuentas, pronósticos y tablas)
+# ---------------------------------------------------------------------------------------------------
+from app.quiniela import api as quiniela_api  # noqa: E402
+
+app.include_router(quiniela_api.auth)
+app.include_router(quiniela_api.game)
+app.include_router(quiniela_api.admin)

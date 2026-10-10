@@ -22,6 +22,8 @@ Documentación interactiva (OpenAPI) en `/docs` del backend. Todas las fechas en
 | `POST /api/admin/retrain` 🔒 | — | Reentrena y regenera predicciones (202) |
 | `POST /api/admin/backtest` 🔒 | — | Backtesting completo (202). En Render gratuito puede quedarse sin memoria; mejor usar GitHub Actions |
 
+Rutas de la quiniela (`/api/auth/*`, `/api/quiniela/*`, `/api/admin/quiniela/*`): ver [08-quiniela.md](08-quiniela.md).
+
 🔒 Requiere la cabecera `Authorization: Bearer <ADMIN_TOKEN>`. Sin `ADMIN_TOKEN` configurado responden 503;
 con token incorrecto, 401.
 

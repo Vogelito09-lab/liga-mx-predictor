@@ -19,6 +19,7 @@ services:
         generateValue: true  # Render genera un token aleatorio; cópialo desde el panel
       - key: CORS_ORIGINS
         sync: false          # URL del sitio estático, p. ej. https://ligamx-web.onrender.com
+      # Quiniela: variables opcionales (ver docs/08-quiniela.md).
 
   - type: web
     name: ligamx-web

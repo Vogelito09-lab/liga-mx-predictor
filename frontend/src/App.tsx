@@ -5,6 +5,8 @@ import { Admin } from './pages/Admin'
 import { History } from './pages/History'
 import { Home } from './pages/Home'
 import { Predictions } from './pages/Predictions'
+import { Quiniela } from './pages/Quiniela'
+import { ConfirmEmail, ResetPassword } from './pages/QuinielaLinks'
 import { Standings } from './pages/Standings'
 import { Loading } from './components/ui'
 
@@ -19,6 +21,9 @@ export default function App() {
       <Route element={<Layout />}>
         <Route index element={<Home />} />
         <Route path="tabla" element={<Standings />} />
+        <Route path="quiniela" element={<Quiniela />} />
+        <Route path="quiniela/confirmar" element={<ConfirmEmail />} />
+        <Route path="quiniela/restablecer" element={<ResetPassword />} />
         <Route path="predicciones" element={<Predictions />} />
         <Route path="historico" element={<History />} />
         <Route path="equipos" element={<Suspense fallback={<Loading />}><Teams /></Suspense>} />

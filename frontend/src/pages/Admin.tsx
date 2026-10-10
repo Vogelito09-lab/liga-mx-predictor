@@ -62,6 +62,7 @@ export function Admin() {
           sincronización completa cada 6 h, mantenimiento diario (reentrenamiento según política) y backtesting mensual.
         </p>
       </Card>
+      <QuinielaUsers token={token} />
       <Card className="overflow-x-auto">
         <h3 className="mb-2 text-sm font-semibold">Últimas ejecuciones</h3>
         {jobs.isLoading ? <Loading /> : !jobs.data?.length ? <Empty>Sin ejecuciones registradas.</Empty> : (
@@ -90,5 +91,69 @@ export function Admin() {
           </table>)}
       </Card>
     </div>
+  )
+}
+
+function QuinielaUsers({ token }: { token: string }) {
+  const qc = useQueryClient()
+  const users = useQuery({ queryKey: ['admin-users', token], queryFn: () => api.adminUsers(token), refetchInterval: 30_000 })
+  const act = useMutation({
+    mutationFn: ({ id, action }: { id: number; action: 'approve' | 'reject' | 'delete' }) => api.adminUserAction(token, id, action),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['admin-users'] }),
+  })
+  const [link, setLink] = useState<{ name: string; link: string } | null>(null)
+  const makeLink = useMutation({
+    mutationFn: (u: { id: number; display_name: string | null; email: string }) =>
+      api.adminUserLink(token, u.id).then((r) => ({ name: u.display_name ?? u.email, link: r.link })),
+    onSuccess: setLink,
+  })
+  const pending = users.data?.items.filter((u) => !u.approved) ?? []
+  const approved = users.data?.items.filter((u) => u.approved) ?? []
+  return (
+    <Card className="space-y-4 overflow-x-auto">
+      <h3 className="text-sm font-semibold">Quiniela: solicitudes y participantes</h3>
+      {users.isLoading ? <Loading /> : users.error ? <ErrorBox error={users.error} /> : (
+        <>
+          <div className="space-y-2">
+            <h4 className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
+              Solicitudes pendientes {pending.length > 0 && <Badge tone="amber">{pending.length}</Badge>}
+            </h4>
+            {!pending.length ? <p className="text-xs text-slate-500">No hay solicitudes por revisar.</p> : pending.map((u) => (
+              <div key={u.id} className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-amber-200 bg-amber-50 p-2 text-sm dark:border-amber-900 dark:bg-amber-950/40">
+                <span><b>{u.display_name ?? '—'}</b> <span className="text-xs text-slate-500">· {u.email} · {fmtDateTime(u.created_at)}</span></span>
+                <span className="flex gap-2">
+                  <button className="rounded-lg bg-brand-700 px-3 py-1 text-xs text-white" disabled={act.isPending} onClick={() => act.mutate({ id: u.id, action: 'approve' })}>Aprobar</button>
+                  <button className="rounded-lg border px-3 py-1 text-xs" disabled={act.isPending} onClick={() => { if (confirm(`¿Rechazar la solicitud de ${u.display_name ?? u.email}?`)) act.mutate({ id: u.id, action: 'reject' }) }}>Rechazar</button>
+                </span>
+              </div>
+            ))}
+          </div>
+          <div className="space-y-2">
+            <h4 className="text-xs font-semibold uppercase tracking-wide text-slate-500">Participantes ({approved.length})</h4>
+            {!approved.length ? <Empty>Todavía no apruebas a nadie.</Empty> : (
+              <table className="w-full min-w-[600px] text-xs">
+                <thead className="text-slate-500"><tr><th className="text-left">Nombre</th><th className="text-left">Correo</th><th>Pronósticos</th><th className="text-left">Último ingreso</th><th /></tr></thead>
+                <tbody>{approved.map((u) => (
+                  <tr key={u.id} className="border-t border-slate-100 dark:border-slate-800">
+                    <td className="py-1 font-medium">{u.display_name ?? '—'}</td><td>{u.email}</td>
+                    <td className="text-center">{u.picks}</td><td>{fmtDateTime(u.last_login_at)}</td>
+                    <td className="space-x-2 text-right">
+                      <button className="underline" onClick={() => makeLink.mutate(u)}>Enlace de contraseña</button>
+                      <button className="text-red-700 underline" onClick={() => { if (confirm(`¿Sacar a ${u.display_name ?? u.email} de la quiniela y borrar sus pronósticos?`)) act.mutate({ id: u.id, action: 'delete' }) }}>Borrar</button>
+                    </td>
+                  </tr>))}</tbody>
+              </table>)}
+          </div>
+        </>
+      )}
+      {link && (
+        <div className="rounded-lg bg-slate-50 p-2 text-xs dark:bg-slate-800/50">
+          Enlace para que <b>{link.name}</b> elija una contraseña nueva (sirve 24 horas, una sola vez). Mándaselo por WhatsApp:
+          <input readOnly value={link.link} onFocus={(e) => e.target.select()} className="mt-1 w-full rounded border px-2 py-1 font-mono dark:bg-slate-900" />
+        </div>
+      )}
+      {(act.error || makeLink.error) && <ErrorBox error={act.error ?? makeLink.error} />}
+      <p className="text-xs text-slate-500">Si alguien olvida su contraseña, genera aquí su enlace y mándaselo. Las solicitudes nuevas se revisan cada 30 segundos.</p>
+    </Card>
   )
 }
