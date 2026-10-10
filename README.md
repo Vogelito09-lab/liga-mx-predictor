@@ -226,7 +226,7 @@ nunca se mezclan con la base real.
 | `connection refused` en el puerto 5432 | El servicio de PostgreSQL no está iniciado: `Start-Service postgresql-x64-16` (PowerShell como administrador) |
 | `relation "matches" does not exist` | Falta `alembic upgrade head` |
 | La web dice "Sin conexión con el servidor" | El backend no está corriendo en el puerto 8000 |
-| La web dice "Datos posiblemente atrasados" | No hubo sincronización correcta en los últimos 30 min; ejecuta `python -m app.jobs.cli live` o revisa Administración |
+| La web dice "Datos posiblemente atrasados" | No hubo sincronización correcta en los últimos 30 min con partidos en juego (o en 7 h sin partidos); ejecuta `python -m app.jobs.cli live` o revisa Administración |
 | `Primero hay que ejecutar el backtesting` | Ejecuta `python -m app.jobs.cli backtest` |
 | `Datos insuficientes para backtesting` | Falta descargar el histórico (paso 6) |
 | Una tarea termina como `skipped` | Otra actualización estaba en curso; es el candado que evita corrupción. Vuelve a intentarlo después |
