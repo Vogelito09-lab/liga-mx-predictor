@@ -25,6 +25,7 @@ def upgrade() -> None:
         sa.Column("display_name", sa.String(length=24), nullable=True),
         sa.Column("display_name_key", sa.String(length=24), nullable=True),
         sa.Column("email_verified_at", sa.DateTime(timezone=True), nullable=True),
+        sa.Column("approved_at", sa.DateTime(timezone=True), nullable=True),
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
         sa.Column("last_login_at", sa.DateTime(timezone=True), nullable=True),
         sa.PrimaryKeyConstraint("id"),

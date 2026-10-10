@@ -256,6 +256,8 @@ class User(Base):
     display_name: Mapped[str | None] = mapped_column(String(24))
     display_name_key: Mapped[str | None] = mapped_column(String(24), unique=True)  # minúsculas, sin acentos
     email_verified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # Cada persona pide entrar y el administrador la aprueba. Sin aprobar no puede iniciar sesión.
+    approved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
     last_login_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 

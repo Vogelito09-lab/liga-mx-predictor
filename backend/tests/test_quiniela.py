@@ -71,7 +71,6 @@ def world(session, monkeypatch):
 
     clock = {"now": NOW}
     monkeypatch.setattr(qapi, "_now", lambda: clock["now"])
-    monkeypatch.setattr(get_settings(), "quiniela_invite_code", "Amigos2030")
     monkeypatch.setattr(get_settings(), "web_url", "https://quiniela.example")
     outbox = []
     monkeypatch.setattr(mailer, "send", lambda email: outbox.append(email) or True)
@@ -80,58 +79,64 @@ def world(session, monkeypatch):
     return {"session": session, "clock": clock, "outbox": outbox, "client": TestClient(app)}
 
 
-def _link_token(email) -> str:
-    return email.text.split("token=")[1].split()[0]
+ADMIN = {"Authorization": "Bearer token-de-prueba"}
+
+
+def _link_token(text: str) -> str:
+    return text.split("token=")[1].split()[0]
+
+
+def _request(c, email, name, password="clave-segura-1", **extra):
+    return c.post("/api/auth/register", json={"display_name": name, "email": email, "password": password, **extra})
+
+
+def _uid(c, email) -> int:
+    return next(u["id"] for u in c.get("/api/admin/quiniela/users", headers=ADMIN).json()["items"]
+                if u["email"] == email)
 
 
 def _signup(w, email, name, password="clave-segura-1") -> dict:
+    """Pide acceso, el administrador aprueba y la persona inicia sesión."""
     c = w["client"]
-    r = c.post("/api/auth/register", json={"email": email, "password": password, "invite_code": " amigos2030 "})
+    r = _request(c, email, name, password)
     assert r.status_code == 201, r.text
-    assert r.json()["email_sent"] is True
-    r = c.post("/api/auth/verify", json={"token": _link_token(w["outbox"][-1])})
+    assert c.post(f"/api/admin/quiniela/users/{_uid(c, email)}/approve", headers=ADMIN).status_code == 200
+    r = c.post("/api/auth/login", json={"email": email, "password": password})
     assert r.status_code == 200, r.text
-    h = {"Authorization": f"Bearer {r.json()['token']}"}
-    assert c.put("/api/auth/me", json={"display_name": name}, headers=h).status_code == 200
-    return h
+    return {"Authorization": f"Bearer {r.json()['token']}"}
 
 
 def _ids(session):
     return {e: session.scalar(select(m.Match.id).where(m.Match.espn_id == e)) for e in ("q1", "q2", "q3")}
 
 
-def test_register_verify_login_and_name(world):
+def test_request_approval_login_and_name(world):
     c, outbox = world["client"], world["outbox"]
-    bad = c.post("/api/auth/register", json={"email": "a@x.com", "password": "clave-segura-1", "invite_code": "no"})
-    assert bad.status_code == 403
-    weak = c.post("/api/auth/register", json={"email": "a@x.com", "password": "corta", "invite_code": "Amigos2030"})
-    assert weak.status_code == 422
-    r = c.post("/api/auth/register", json={"email": "Ana@X.com ", "password": "clave-segura-1",
-                                           "invite_code": "Amigos2030"})
-    assert r.status_code == 201
-    assert outbox[-1].to == "ana@x.com" and "https://quiniela.example/quiniela/confirmar?token=" in outbox[-1].text
-    dup = c.post("/api/auth/register", json={"email": "ana@x.com", "password": "clave-segura-1",
-                                             "invite_code": "Amigos2030"})
-    assert dup.status_code == 409
-    # sin confirmar no puede entrar
-    assert c.post("/api/auth/login", json={"email": "ana@x.com", "password": "clave-segura-1"}).status_code == 403
-    token = _link_token(outbox[-1])
-    assert c.post("/api/auth/verify", json={"token": token}).status_code == 200
-    assert c.post("/api/auth/verify", json={"token": token}).status_code == 400  # un solo uso
+    assert c.get("/api/auth/config").json() == {"registration_open": True, "invite_code_required": False,
+                                                "email_enabled": False}
+    assert _request(c, "a@x.com", "Ana", password="corta").status_code == 422
+    assert _request(c, "a@x.com", "ab").status_code == 422
+    assert _request(c, "a@x.com", "Modelo IA").status_code == 409
+    r = _request(c, "Ana@X.com ", "Ana")
+    assert r.status_code == 201 and r.json()["email_sent"] is False and not outbox  # sin servicio de correo
+    assert _request(c, "ana@x.com", "Otra").status_code == 409  # correo repetido
+    assert _request(c, "b@x.com", "ÁNA").status_code == 409  # nombre repetido (sin acentos ni mayúsculas)
+    # pendiente de aprobación: no puede entrar
+    r = c.post("/api/auth/login", json={"email": "ana@x.com", "password": "clave-segura-1"})
+    assert r.status_code == 423
+    users = c.get("/api/admin/quiniela/users", headers=ADMIN).json()
+    assert users["pending"] == 1 and users["items"][0]["display_name"] == "Ana"
+    assert c.post(f"/api/admin/quiniela/users/{_uid(c, 'ana@x.com')}/approve").status_code == 401  # solo admin
+    c.post(f"/api/admin/quiniela/users/{_uid(c, 'ana@x.com')}/approve", headers=ADMIN)
     assert c.post("/api/auth/login", json={"email": "ana@x.com", "password": "mala-clave"}).status_code == 401
     r = c.post("/api/auth/login", json={"email": "ANA@x.com", "password": "clave-segura-1"})
     assert r.status_code == 200
     h = {"Authorization": f"Bearer {r.json()['token']}"}
     me = c.get("/api/auth/me", headers=h).json()
-    assert me["display_name"] is None and me["email_verified"]
-    # sin nombre todavía no puede pronosticar
-    mid = _ids(world["session"])["q1"]
-    assert c.put("/api/quiniela/picks", json={"picks": [{"match_id": mid, "home_goals": 1, "away_goals": 0}]},
-                 headers=h).status_code == 409
-    assert c.put("/api/auth/me", json={"display_name": "Modelo IA"}, headers=h).status_code == 409
-    assert c.put("/api/auth/me", json={"display_name": "Ana"}, headers=h).json()["display_name"] == "Ana"
+    assert me["display_name"] == "Ana" and me["approved"]
     other = _signup(world, "beto@x.com", "Beto")
-    assert c.put("/api/auth/me", json={"display_name": "ÁNA"}, headers=other).status_code == 409
+    assert c.put("/api/auth/me", json={"display_name": "ana"}, headers=other).status_code == 409
+    assert c.put("/api/auth/me", json={"display_name": "Beto G"}, headers=other).json()["display_name"] == "Beto G"
     # la contraseña nunca se guarda en claro
     user = world["session"].scalar(select(m.User).where(m.User.email == "ana@x.com"))
     assert "clave-segura-1" not in user.password_hash
@@ -139,23 +144,53 @@ def test_register_verify_login_and_name(world):
     assert c.get("/api/auth/me", headers=h).status_code == 401
 
 
-def test_password_reset(world):
-    c, outbox = world["client"], world["outbox"]
+def test_reject_request(world):
+    c = world["client"]
+    _request(c, "x@x.com", "Intruso")
+    assert c.post(f"/api/admin/quiniela/users/{_uid(c, 'x@x.com')}/reject", headers=ADMIN).status_code == 200
+    assert c.get("/api/admin/quiniela/users", headers=ADMIN).json()["items"] == []
+    assert c.post("/api/auth/login", json={"email": "x@x.com", "password": "clave-segura-1"}).status_code == 401
+
+
+def test_optional_invite_code_and_closed_registration(world, monkeypatch):
+    c = world["client"]
+    monkeypatch.setattr(get_settings(), "quiniela_invite_code", "Amigos2030")
+    assert _request(c, "a@x.com", "Ana", invite_code="no").status_code == 403
+    assert _request(c, "a@x.com", "Ana", invite_code=" amigos2030 ").status_code == 201
+    monkeypatch.setattr(get_settings(), "quiniela_registration_open", False)
+    assert _request(c, "b@x.com", "Beto", invite_code="Amigos2030").status_code == 503
+
+
+def test_admin_reset_link(world):
+    c = world["client"]
     _signup(world, "ana@x.com", "Ana")
-    r = c.post("/api/auth/forgot-password", json={"email": "nadie@x.com"})
-    assert r.status_code == 200 and len(outbox) == 1  # no revela si existe; no envía nada
-    c.post("/api/auth/forgot-password", json={"email": "ana@x.com"})
-    assert "restablecer?token=" in outbox[-1].text
-    token = _link_token(outbox[-1])
-    r = c.post("/api/auth/reset-password", json={"token": token, "password": "nueva-clave-2"})
-    assert r.status_code == 200
+    link = c.post(f"/api/admin/quiniela/users/{_uid(c, 'ana@x.com')}/link", headers=ADMIN).json()["link"]
+    assert link.startswith("https://quiniela.example/quiniela/restablecer?token=")
+    tok = _link_token(link)
+    r = c.post("/api/auth/reset-password", json={"token": tok, "password": "nueva-clave-2"})
+    assert r.status_code == 200 and r.json()["token"]
+    assert c.post("/api/auth/reset-password", json={"token": tok, "password": "otra-3333"}).status_code == 400
     assert c.post("/api/auth/login", json={"email": "ana@x.com", "password": "clave-segura-1"}).status_code == 401
     assert c.post("/api/auth/login", json={"email": "ana@x.com", "password": "nueva-clave-2"}).status_code == 200
-    # vencido
+
+
+def test_with_email_service(world, monkeypatch):
+    """Con servicio de correo: confirmar correo y recuperar contraseña sin ayuda del administrador."""
+    c, outbox = world["client"], world["outbox"]
+    monkeypatch.setattr(mailer, "configured", lambda: True)
+    r = _request(c, "ana@x.com", "Ana")
+    assert r.json()["email_sent"] and "confirmar?token=" in outbox[-1].text
+    r = c.post("/api/auth/verify", json={"token": _link_token(outbox[-1].text)})
+    assert r.status_code == 200 and r.json()["token"] is None  # confirmado, falta la aprobación
+    assert c.post("/api/auth/login", json={"email": "ana@x.com", "password": "clave-segura-1"}).status_code == 423
+    c.post(f"/api/admin/quiniela/users/{_uid(c, 'ana@x.com')}/approve", headers=ADMIN)
+    assert c.post("/api/auth/forgot-password", json={"email": "nadie@x.com"}).status_code == 200
+    n = len(outbox)
     c.post("/api/auth/forgot-password", json={"email": "ana@x.com"})
-    world["clock"]["now"] = NOW + timedelta(hours=2)
-    r = c.post("/api/auth/reset-password", json={"token": _link_token(outbox[-1]), "password": "otra-clave-3"})
-    assert r.status_code == 400
+    assert len(outbox) == n + 1 and "restablecer?token=" in outbox[-1].text
+    tok = _link_token(outbox[-1].text)
+    world["clock"]["now"] = NOW + timedelta(hours=2)  # vence en 1 hora
+    assert c.post("/api/auth/reset-password", json={"token": tok, "password": "otra-clave-3"}).status_code == 400
 
 
 def test_picks_lock_visibility_and_tables(world):
@@ -227,29 +262,3 @@ def test_tiebreak_more_exact_scores(world):
     ranked = _rank([a, b, c_])
     assert [r["display_name"] for r in ranked] == ["B", "C", "A"]
     assert [r["position"] for r in ranked] == [1, 1, 3]
-
-
-def test_admin_users(world):
-    c = world["client"]
-    adm = {"Authorization": "Bearer token-de-prueba"}
-    world["outbox"].clear()
-    c.post("/api/auth/register", json={"email": "sin@x.com", "password": "clave-segura-1",
-                                       "invite_code": "Amigos2030"})
-    assert c.get("/api/admin/quiniela/users").status_code == 401
-    users = c.get("/api/admin/quiniela/users", headers=adm).json()["items"]
-    uid = users[0]["id"]
-    assert not users[0]["email_verified"]
-    assert c.post(f"/api/admin/quiniela/users/{uid}/verify", headers=adm).json()["email_verified"]
-    assert c.post("/api/auth/login", json={"email": "sin@x.com", "password": "clave-segura-1"}).status_code == 200
-    link = c.post(f"/api/admin/quiniela/users/{uid}/link", headers=adm).json()["link"]
-    tok = link.split("token=")[1]
-    assert c.post("/api/auth/reset-password", json={"token": tok, "password": "otra-clave-9"}).status_code == 200
-    assert c.post(f"/api/admin/quiniela/users/{uid}/delete", headers=adm).status_code == 200
-    assert c.get("/api/admin/quiniela/users", headers=adm).json()["items"] == []
-
-
-def test_registration_closed_without_code(world, monkeypatch):
-    monkeypatch.setattr(get_settings(), "quiniela_invite_code", "")
-    r = world["client"].post("/api/auth/register", json={"email": "a@x.com", "password": "clave-segura-1",
-                                                         "invite_code": ""})
-    assert r.status_code == 503

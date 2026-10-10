@@ -48,7 +48,7 @@ export const api = {
   adminAction: (t: string, action: 'update-data' | 'retrain' | 'backtest') =>
     request<{ started: string; message: string }>(`/api/admin/${action}`, { method: 'POST', ...admin(t) }),
   adminUsers: (t: string) => request<AdminUsers>('/api/admin/quiniela/users', admin(t)),
-  adminUserAction: (t: string, id: number, action: 'verify' | 'delete') =>
+  adminUserAction: (t: string, id: number, action: 'approve' | 'reject' | 'delete') =>
     request(`/api/admin/quiniela/users/${id}/${action}`, { method: 'POST', ...admin(t) }),
   adminUserLink: (t: string, id: number) =>
     request<{ link: string; expires_hours: number }>(`/api/admin/quiniela/users/${id}/link`, { method: 'POST', ...admin(t) }),
@@ -57,8 +57,8 @@ export const api = {
 /** Cuentas y quiniela. `token` es el de la sesión del usuario (no el de administración). */
 export const quiniela = {
   config: () => request<AuthConfig>('/api/auth/config'),
-  register: (email: string, password: string, invite_code: string) =>
-    request<MessageResult>('/api/auth/register', send('POST', { email, password, invite_code })),
+  register: (display_name: string, email: string, password: string, invite_code: string) =>
+    request<MessageResult>('/api/auth/register', send('POST', { display_name, email, password, invite_code })),
   resendVerification: (email: string) => request<MessageResult>('/api/auth/resend-verification', send('POST', { email })),
   verify: (token: string) => request<AuthResult>('/api/auth/verify', send('POST', { token })),
   login: (email: string, password: string) => request<AuthResult>('/api/auth/login', send('POST', { email, password })),

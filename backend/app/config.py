@@ -30,7 +30,9 @@ class Settings(BaseSettings):
     stale_after_minutes_idle: int = 7 * 60
 
     # Quiniela entre amigos
-    quiniela_invite_code: str = Field("", description="Código secreto para registrarse. Vacío = registro cerrado.")
+    # Cualquiera puede pedir entrar; el administrador aprueba cada solicitud desde Administración.
+    quiniela_registration_open: bool = Field(True, description="False = no se aceptan solicitudes nuevas")
+    quiniela_invite_code: str = Field("", description="Código opcional que se pide al registrarse. Vacío = no se pide.")
     quiniela_liguilla_multiplier: int = Field(1, description="Multiplicador de puntos en la liguilla (1 = normales)")
     # Dirección pública de la página (para los enlaces de los correos). Vacío = el primer valor de CORS_ORIGINS.
     web_url: str = ""

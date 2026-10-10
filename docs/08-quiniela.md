@@ -24,58 +24,44 @@ partido se cierra a su propia hora, eso no afecta los puntos.
 Los puntos no se guardan: se calculan cada vez con los resultados confirmados que trae la sincronización
 automática, así que las tablas se actualizan solas y una corrección de la fuente se refleja sin hacer nada.
 
-## Cuentas
+## Cuentas: el organizador aprueba a cada persona
 
-- Registro con correo, contraseña y el **código de invitación** (solo lo tienen tus amigos).
-- La cuenta se confirma con un enlace que llega por correo (vence en 48 h). Sin confirmar no se puede entrar.
-- Al primer ingreso cada persona elige el nombre que aparece en las tablas (único; se puede cambiar).
-  El correo nunca se muestra.
-- "Olvidé mi contraseña" manda un enlace que sirve 1 hora y una sola vez.
+1. En **Quiniela → Pedir acceso** la persona escribe su nombre (el que verán todos), su correo y una contraseña.
+2. La solicitud aparece en **Administración → Quiniela: solicitudes y participantes** (entras con el `ADMIN_TOKEN`).
+3. El organizador da clic en **Aprobar** o **Rechazar**. Sin aprobar nadie puede entrar ni pronosticar.
+4. Ya aprobada, la persona entra con su correo y contraseña. El correo nunca se muestra en las tablas.
+
+- Nombres únicos (sin distinguir mayúsculas ni acentos); se pueden cambiar después.
+- **Olvidó su contraseña**: en Administración, botón **Enlace de contraseña** junto a su nombre. El enlace
+  sirve 24 horas y una sola vez; se manda por WhatsApp.
+- **Borrar**: saca a la persona de la quiniela junto con sus pronósticos.
 - Seguridad: las contraseñas se guardan con scrypt (no se pueden leer); de las sesiones y enlaces solo se
-  guarda un hash. Hay límite de intentos para iniciar sesión y para mandar correos.
+  guarda un hash. Hay límite de intentos para iniciar sesión y para pedir acceso.
 
-## Variables de entorno (servicio `ligamx-api` en Render)
+No hace falta ninguna variable nueva en Render. Opcionales (servicio `ligamx-api` → **Environment**):
 
-| Variable | Para qué | Ejemplo |
-|---|---|---|
-| `QUINIELA_INVITE_CODE` | Código para registrarse. Vacío = registro cerrado | `TacosDelViernes` |
-| `QUINIELA_LIGUILLA_MULTIPLIER` | Multiplicador de puntos en liguilla (opcional) | `1` |
-| `EMAIL_PROVIDER` | `brevo` o `mailjet`. Vacío = no se mandan correos | `brevo` |
-| `EMAIL_API_KEY` | Clave del servicio de correo | (de Brevo) |
-| `EMAIL_API_SECRET` | Solo Mailjet: la "Secret key" | |
-| `EMAIL_FROM` | Remitente verificado en el servicio de correo | `tucorreo@gmail.com` |
-| `WEB_URL` | Dirección de la página para los enlaces (opcional; por defecto la de `CORS_ORIGINS`) | |
+| Variable | Para qué |
+|---|---|
+| `QUINIELA_REGISTRATION_OPEN` | `false` para dejar de recibir solicitudes nuevas |
+| `QUINIELA_INVITE_CODE` | Pedir además un código al solicitar acceso |
+| `QUINIELA_LIGUILLA_MULTIPLIER` | `2` para puntos dobles en liguilla |
 
-Render gratis **bloquea los puertos SMTP** desde septiembre de 2025, por eso no se puede mandar con Gmail
-directamente y se usa un servicio que recibe los correos por HTTPS (Brevo: 300 correos al día gratis, sin
-tarjeta).
+### Correos (opcional, apagado)
 
-### Agregar una variable en Render (paso a paso)
-
-1. Entra a https://dashboard.render.com y abre el servicio **ligamx-api**.
-2. En el menú de la izquierda haz clic en **Environment**.
-3. Clic en **+ Add Environment Variable**.
-4. En **Key** escribe el nombre (por ejemplo `QUINIELA_INVITE_CODE`) y en **Value** el valor.
-5. Clic en **Save, rebuild, and deploy**. En unos minutos el servicio se reinicia con el cambio.
-
-## Sin servicio de correo
-
-Si `EMAIL_PROVIDER` está vacío todo funciona igual, pero los correos no salen. En **Administración →
-Quiniela: participantes** (con el `ADMIN_TOKEN`) puedes:
-
-- **Confirmar** a cada persona que se registró.
-- Generar un **Enlace de contraseña** (sirve 24 horas) para mandarlo por WhatsApp a quien la olvidó.
-- **Borrar** una cuenta y sus pronósticos.
+El código puede mandar correos de confirmación y de "olvidé mi contraseña" con Brevo o Mailjet
+(`EMAIL_PROVIDER`, `EMAIL_API_KEY`, `EMAIL_FROM`; `EMAIL_API_SECRET` solo Mailjet). Se decidió no usarlo:
+la aprobación del organizador ya filtra quién entra. Render gratis bloquea los puertos SMTP desde
+septiembre de 2025, por eso no se puede usar Gmail directo.
 
 ## API
 
 | Método y ruta | Descripción |
 |---|---|
 | `GET /api/auth/config` | Si el registro está abierto y si hay correos |
-| `POST /api/auth/register` | `email`, `password`, `invite_code` |
-| `POST /api/auth/verify` | `token` del correo → inicia sesión |
+| `POST /api/auth/register` | Pedir acceso: `display_name`, `email`, `password` (`invite_code` si se configuró) |
+| `POST /api/auth/verify` | `token` del correo (solo con correos activados) |
 | `POST /api/auth/resend-verification` | `email` |
-| `POST /api/auth/login` | `email`, `password` → `token` de sesión (60 días) |
+| `POST /api/auth/login` | `email`, `password` → `token` de sesión (60 días). 423 si falta la aprobación |
 | `POST /api/auth/logout` 👤 | Cierra la sesión |
 | `GET /api/auth/me` 👤 | Usuario actual |
 | `PUT /api/auth/me` 👤 | `display_name` |
@@ -87,7 +73,8 @@ Quiniela: participantes** (con el `ADMIN_TOKEN`) puedes:
 | `PUT /api/quiniela/picks` 👤 | `picks: [{match_id, home_goals, away_goals}]`; rechaza los partidos ya iniciados |
 | `GET /api/quiniela/tablas` | Tabla de cada jornada y tabla general |
 | `GET /api/admin/quiniela/users` 🔒 | Participantes |
-| `POST /api/admin/quiniela/users/{id}/verify` 🔒 | Confirmar a mano |
+| `POST /api/admin/quiniela/users/{id}/approve` 🔒 | Aprobar solicitud |
+| `POST /api/admin/quiniela/users/{id}/reject` 🔒 | Rechazar solicitud (la borra) |
 | `POST /api/admin/quiniela/users/{id}/link` 🔒 | Enlace para cambiar contraseña |
 | `POST /api/admin/quiniela/users/{id}/delete` 🔒 | Borrar cuenta y pronósticos |
 

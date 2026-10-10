@@ -123,8 +123,8 @@ def current_jornada_key(groups: list[tuple[Jornada, list[m.Match]]], now: dateti
 
 
 def participants(session: Session) -> list[m.User]:
-    """Usuarios que ya confirmaron su correo y eligieron nombre."""
-    return list(session.scalars(select(m.User).where(m.User.email_verified_at.is_not(None),
+    """Usuarios aprobados por el administrador y con nombre."""
+    return list(session.scalars(select(m.User).where(m.User.approved_at.is_not(None),
                                                      m.User.display_name.is_not(None))
                                 .order_by(m.User.display_name_key)))
 

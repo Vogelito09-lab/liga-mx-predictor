@@ -92,7 +92,7 @@ def _session_user(session: Session, authorization: str | None) -> m.User | None:
     if not token:
         return None
     row = session.scalar(select(m.UserSession).where(m.UserSession.token_hash == sec.token_hash(token)))
-    if row is None or row.expires_at <= _now():
+    if row is None or row.expires_at <= _now() or row.user.approved_at is None:
         return None
     return row.user
 
@@ -131,7 +131,32 @@ def _start_session(session: Session, user: m.User) -> str:
 
 def user_out(u: m.User) -> dict:
     return {"id": u.id, "email": u.email, "display_name": u.display_name,
-            "email_verified": u.email_verified_at is not None}
+            "email_verified": u.email_verified_at is not None, "approved": u.approved_at is not None}
+
+
+def _check_can_enter(user: m.User) -> None:
+    """Para entrar: aprobado por el administrador y, si hay servicio de correo, con el correo confirmado."""
+    if mailer.configured() and user.email_verified_at is None and user.approved_at is None:
+        raise HTTPException(403, "Todavía no confirmas tu correo. Busca el mensaje que te mandamos "
+                                 "(revisa también spam) o pide uno nuevo.")
+    if user.approved_at is None:
+        raise HTTPException(423, "Tu solicitud está esperando que el administrador la apruebe. "
+                                 "Vuelve a intentar más tarde.")
+
+
+def _check_name(session: Session, name: str, user_id: int | None = None) -> tuple[str, str]:
+    name = sec.clean_display_name(name)
+    if problem := sec.display_name_problem(name):
+        raise HTTPException(422, problem)
+    key = sec.display_name_key(name)
+    if key == sec.display_name_key(q.MODEL_NAME) or key.startswith("modelo"):
+        raise HTTPException(409, "Ese nombre está reservado")
+    taken = select(m.User.id).where(m.User.display_name_key == key)
+    if user_id is not None:
+        taken = taken.where(m.User.id != user_id)
+    if session.scalar(taken):
+        raise HTTPException(409, "Ese nombre ya lo usa otra persona. Elige otro.")
+    return name, key
 
 
 def _send_link(session: Session, user: m.User, purpose: str) -> bool:
@@ -174,9 +199,10 @@ auth = APIRouter(prefix="/api/auth", tags=["cuentas"])
 
 
 class RegisterIn(BaseModel):
+    display_name: str = Field(max_length=60)
     email: str = Field(max_length=254)
     password: str = Field(max_length=200)
-    invite_code: str = Field(max_length=100)
+    invite_code: str = Field("", max_length=100)
 
 
 class LoginIn(BaseModel):
@@ -209,35 +235,40 @@ class PasswordChangeIn(BaseModel):
 @auth.get("/config")
 def auth_config():
     s = get_settings()
-    return {"registration_open": bool(s.quiniela_invite_code), "email_enabled": mailer.configured()}
+    return {"registration_open": s.quiniela_registration_open, "invite_code_required": bool(s.quiniela_invite_code),
+            "email_enabled": mailer.configured()}
 
 
 @auth.post("/register", status_code=201)
 def register(body: RegisterIn, session: DB, request: Request):
+    """Solicitud para jugar. Queda pendiente hasta que el administrador la aprueba."""
     s = get_settings()
-    if not s.quiniela_invite_code:
-        raise HTTPException(503, "El registro está cerrado por ahora")
+    if not s.quiniela_registration_open:
+        raise HTTPException(503, "Por ahora no se aceptan solicitudes nuevas")
     signup_limiter.check(_ip(request))
-    if not sec.same_secret(body.invite_code, s.quiniela_invite_code):
+    if s.quiniela_invite_code and not sec.same_secret(body.invite_code, s.quiniela_invite_code):
         raise HTTPException(403, "El código de invitación no es correcto")
     email = sec.normalize_email(body.email)
     if not sec.valid_email(email):
         raise HTTPException(422, "Escribe un correo válido")
     if problem := sec.password_problem(body.password):
         raise HTTPException(422, problem)
+    name, key = _check_name(session, body.display_name)
     if session.scalar(select(m.User.id).where(m.User.email == email)):
         raise HTTPException(409, "Ese correo ya está registrado. Inicia sesión o recupera tu contraseña.")
-    user = m.User(email=email, password_hash=sec.hash_password(body.password), created_at=_now())
+    user = m.User(email=email, password_hash=sec.hash_password(body.password), display_name=name,
+                  display_name_key=key, created_at=_now())
     session.add(user)
     try:
         session.commit()
     except IntegrityError:
         session.rollback()
-        raise HTTPException(409, "Ese correo ya está registrado. Inicia sesión o recupera tu contraseña.")
-    sent = _send_link(session, user, "verify")
-    return {"ok": True, "email_sent": sent,
-            "message": "Te mandamos un correo para confirmar tu cuenta. Revisa también la carpeta de spam."
-            if sent else "Cuenta creada. El administrador de la quiniela confirmará tu correo."}
+        raise HTTPException(409, "Ese correo o ese nombre ya están registrados.")
+    sent = _send_link(session, user, "verify") if mailer.configured() else False
+    message = "Listo, tu solicitud le llegó al administrador. Podrás entrar cuando te apruebe."
+    if sent:
+        message += " Mientras, confirma tu correo con el enlace que te mandamos (revisa también spam)."
+    return {"ok": True, "email_sent": sent, "message": message}
 
 
 @auth.post("/resend-verification")
@@ -254,6 +285,9 @@ def resend_verification(body: EmailIn, session: DB):
 def verify(body: TokenIn, session: DB):
     user = _use_link(session, body.token, "verify")
     user.email_verified_at = user.email_verified_at or _now()
+    if user.approved_at is None:  # confirmado, pero todavía falta la aprobación
+        session.commit()
+        return {"token": None, "user": user_out(user)}
     token = _start_session(session, user)
     session.commit()
     return {"token": token, "user": user_out(user)}
@@ -266,9 +300,7 @@ def login(body: LoginIn, session: DB):
     user = session.scalar(select(m.User).where(m.User.email == email))
     if user is None or not sec.verify_password(body.password, user.password_hash):
         raise HTTPException(401, "Correo o contraseña incorrectos")
-    if user.email_verified_at is None:
-        raise HTTPException(403, "Todavía no confirmas tu correo. Busca el mensaje que te mandamos "
-                                 "(revisa también spam) o pide uno nuevo.")
+    _check_can_enter(user)
     token = _start_session(session, user)
     session.commit()
     return {"token": token, "user": user_out(user)}
@@ -290,15 +322,7 @@ def me(user: CurrentUser):
 
 @auth.put("/me")
 def set_name(body: NameIn, user: CurrentUser, session: DB):
-    name = sec.clean_display_name(body.display_name)
-    if problem := sec.display_name_problem(name):
-        raise HTTPException(422, problem)
-    key = sec.display_name_key(name)
-    if key == sec.display_name_key(q.MODEL_NAME) or key.startswith("modelo"):
-        raise HTTPException(409, "Ese nombre está reservado")
-    other = session.scalar(select(m.User.id).where(m.User.display_name_key == key, m.User.id != user.id))
-    if other:
-        raise HTTPException(409, "Ese nombre ya lo usa otra persona. Elige otro.")
+    name, key = _check_name(session, body.display_name, user.id)
     user.display_name, user.display_name_key = name, key
     try:
         session.commit()
@@ -342,7 +366,7 @@ def reset_password(body: ResetIn, session: DB):
     user.password_hash = sec.hash_password(body.password)
     user.email_verified_at = user.email_verified_at or _now()  # recibió el enlace: el correo es suyo
     session.execute(delete(m.UserSession).where(m.UserSession.user_id == user.id))
-    token = _start_session(session, user)
+    token = _start_session(session, user) if user.approved_at is not None else None
     session.commit()
     return {"token": token, "user": user_out(user)}
 
@@ -499,17 +523,21 @@ def admin_users(session: DB):
     counts = dict(session.execute(select(m.QuinielaPick.user_id, func.count()).group_by(m.QuinielaPick.user_id)).all())
     users = session.scalars(select(m.User).order_by(m.User.created_at.desc())).all()
     return {"email_enabled": mailer.configured(),
-            "registration_open": bool(get_settings().quiniela_invite_code),
+            "registration_open": get_settings().quiniela_registration_open,
+            "pending": sum(u.approved_at is None for u in users),
             "items": [{**user_out(u), "created_at": u.created_at, "last_login_at": u.last_login_at,
                        "picks": counts.get(u.id, 0)} for u in users]}
 
 
-@admin.post("/users/{user_id}/verify")
-def admin_verify(user_id: int, session: DB):
+@admin.post("/users/{user_id}/approve")
+def admin_approve(user_id: int, session: DB):
+    """Aprueba una solicitud. El administrador responde por la persona, así que su correo cuenta como confirmado."""
     user = session.get(m.User, user_id)
     if user is None:
         raise HTTPException(404, "Usuario no encontrado")
-    user.email_verified_at = user.email_verified_at or _now()
+    now = _now()
+    user.approved_at = user.approved_at or now
+    user.email_verified_at = user.email_verified_at or now
     session.commit()
     return user_out(user)
 
@@ -530,6 +558,7 @@ def admin_link(user_id: int, session: DB):
     return {"link": f"{get_settings().public_web_url}/quiniela/restablecer?token={token}", "expires_hours": 24}
 
 
+@admin.post("/users/{user_id}/reject")
 @admin.post("/users/{user_id}/delete")
 def admin_delete(user_id: int, session: DB):
     user = session.get(m.User, user_id)

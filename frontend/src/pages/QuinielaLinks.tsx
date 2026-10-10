@@ -14,7 +14,7 @@ export function ConfirmEmail() {
   const token = params.get('token') ?? ''
   const verify = useMutation({
     mutationFn: () => quiniela.verify(token),
-    onSuccess: (r) => { signIn(r.token, r.user); setTimeout(() => navigate('/quiniela'), 1500) },
+    onSuccess: (r) => { if (r.token) { signIn(r.token, r.user); setTimeout(() => navigate('/quiniela'), 1500) } },
   })
   const started = useRef(false)
   useEffect(() => {
@@ -26,7 +26,9 @@ export function ConfirmEmail() {
       <SectionTitle>Confirmar correo</SectionTitle>
       {!token && <Alert>El enlace está incompleto. Ábrelo de nuevo desde el correo.</Alert>}
       {verify.isPending && <Loading label="Confirmando…" />}
-      {verify.isSuccess && <Ok>¡Listo! Tu correo quedó confirmado. Te llevamos a la quiniela…</Ok>}
+      {verify.data && (verify.data.token
+        ? <Ok>¡Listo! Tu correo quedó confirmado. Te llevamos a la quiniela…</Ok>
+        : <Ok>¡Listo! Tu correo quedó confirmado. Podrás entrar cuando el organizador apruebe tu solicitud.</Ok>)}
       {verify.error && <><Alert>{verify.error.message}</Alert><Link className="text-sm underline" to="/quiniela">Ir a la quiniela</Link></>}
     </Card>
   )
@@ -43,13 +45,14 @@ export function ResetPassword() {
   const [localError, setLocalError] = useState('')
   const reset = useMutation({
     mutationFn: () => quiniela.resetPassword(token, password),
-    onSuccess: (r) => { signIn(r.token, r.user); setTimeout(() => navigate('/quiniela'), 1500) },
+    onSuccess: (r) => { if (r.token) { signIn(r.token, r.user); setTimeout(() => navigate('/quiniela'), 1500) } },
   })
   return (
     <Card className="mx-auto max-w-md space-y-3">
       <SectionTitle>Nueva contraseña</SectionTitle>
       {!token ? <Alert>El enlace está incompleto. Ábrelo de nuevo desde el correo.</Alert> : reset.isSuccess ? (
-        <Ok>Tu contraseña cambió y ya iniciaste sesión. Te llevamos a la quiniela…</Ok>
+        <Ok>{reset.data?.token ? 'Tu contraseña cambió y ya iniciaste sesión. Te llevamos a la quiniela…'
+          : 'Tu contraseña cambió. Podrás entrar cuando el organizador apruebe tu solicitud.'}</Ok>
       ) : (
         <form className="space-y-2" onSubmit={(e) => {
           e.preventDefault()

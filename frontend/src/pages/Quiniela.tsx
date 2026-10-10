@@ -112,12 +112,12 @@ function AuthPanel() {
     <Card className="mx-auto w-full max-w-md space-y-4">
       <div className="flex gap-2 text-sm">
         <Tab active={mode === 'login'} onClick={() => setMode('login')}>Entrar</Tab>
-        <Tab active={mode === 'register'} onClick={() => setMode('register')}>Registrarme</Tab>
+        <Tab active={mode === 'register'} onClick={() => setMode('register')}>Pedir acceso</Tab>
       </div>
       {mode === 'login' && <LoginForm onForgot={() => setMode('forgot')} />}
       {mode === 'register' && (cfg.data && !cfg.data.registration_open
-        ? <Alert>El registro está cerrado por ahora. Pídele al organizador que lo abra.</Alert>
-        : <RegisterForm />)}
+        ? <Alert>Por ahora no se aceptan solicitudes nuevas. Pregúntale al organizador.</Alert>
+        : <RegisterForm codeRequired={!!cfg.data?.invite_code_required} />)}
       {mode === 'forgot' && <ForgotForm onBack={() => setMode('login')} />}
     </Card>
   )
@@ -131,7 +131,7 @@ function LoginForm({ onForgot }: { onForgot: () => void }) {
   const { signIn } = useAuth()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-  const login = useMutation({ mutationFn: () => quiniela.login(email, password), onSuccess: (r) => signIn(r.token, r.user) })
+  const login = useMutation({ mutationFn: () => quiniela.login(email, password), onSuccess: (r) => { if (r.token) signIn(r.token, r.user) } })
   const resend = useMutation({ mutationFn: () => quiniela.resendVerification(email) })
   const notVerified = (login.error as { status?: number } | null)?.status === 403
   return (
@@ -154,13 +154,14 @@ function LoginForm({ onForgot }: { onForgot: () => void }) {
   )
 }
 
-function RegisterForm() {
+function RegisterForm({ codeRequired }: { codeRequired: boolean }) {
+  const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [password2, setPassword2] = useState('')
   const [code, setCode] = useState('')
   const [localError, setLocalError] = useState('')
-  const reg = useMutation({ mutationFn: () => quiniela.register(email, password, code) })
+  const reg = useMutation({ mutationFn: () => quiniela.register(name, email, password, code) })
   const submit = (e: FormEvent) => {
     e.preventDefault()
     if (password !== password2) { setLocalError('Las contraseñas no coinciden'); return }
@@ -170,12 +171,13 @@ function RegisterForm() {
   if (reg.data) return <Ok>{reg.data.message}</Ok>
   return (
     <form className="space-y-3" onSubmit={submit}>
-      <input className={input} type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Correo" autoComplete="email" required />
+      <input className={input} value={name} onChange={(e) => setName(e.target.value)} placeholder="Tu nombre en la quiniela (lo verán todos)" maxLength={20} minLength={3} required />
+      <input className={input} type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Correo (para entrar; nadie más lo ve)" autoComplete="email" required />
       <input className={input} type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Contraseña (mínimo 8 caracteres)" autoComplete="new-password" minLength={8} required />
       <input className={input} type="password" value={password2} onChange={(e) => setPassword2(e.target.value)} placeholder="Repite la contraseña" autoComplete="new-password" required />
-      <input className={input} value={code} onChange={(e) => setCode(e.target.value)} placeholder="Código de invitación" autoComplete="off" required />
-      <p className="text-xs text-slate-500">El código te lo da el organizador de la quiniela. Te mandaremos un correo para confirmar tu cuenta.</p>
-      <button className={primary} disabled={reg.isPending}>Crear cuenta</button>
+      {codeRequired && <input className={input} value={code} onChange={(e) => setCode(e.target.value)} placeholder="Código de invitación" autoComplete="off" required />}
+      <p className="text-xs text-slate-500">Tu solicitud le llega al organizador de la quiniela. Cuando te apruebe ya podrás entrar con tu correo y contraseña.</p>
+      <button className={primary} disabled={reg.isPending}>Pedir acceso</button>
       {(localError || reg.error) && <Alert>{localError || reg.error?.message}</Alert>}
     </form>
   )

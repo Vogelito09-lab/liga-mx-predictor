@@ -81,9 +81,9 @@ export interface JobRun { id: number; job: string; trigger: string; status: stri
 export interface Issue { id: number; match_id: number | null; source: string; source_key: string | null; severity: string; code: string; message: string; details: unknown; created_at: string }
 
 // ---- Quiniela ----
-export interface AuthUser { id: number; email: string; display_name: string | null; email_verified: boolean }
-export interface AuthResult { token: string; user: AuthUser }
-export interface AuthConfig { registration_open: boolean; email_enabled: boolean }
+export interface AuthUser { id: number; email: string; display_name: string | null; email_verified: boolean; approved: boolean }
+export interface AuthResult { token: string | null; user: AuthUser }
+export interface AuthConfig { registration_open: boolean; invite_code_required: boolean; email_enabled: boolean }
 export interface MessageResult { ok: boolean; email_sent: boolean; message: string; email_enabled?: boolean }
 
 export interface QJornadaSummary {
@@ -118,4 +118,4 @@ export interface QJornadaTable {
 }
 export interface QTables { tournament: string; finished: boolean; winners: string[]; rows: QRow[]; jornadas: QJornadaTable[] }
 export interface AdminUser extends AuthUser { created_at: string; last_login_at: string | null; picks: number }
-export interface AdminUsers { email_enabled: boolean; registration_open: boolean; items: AdminUser[] }
+export interface AdminUsers { email_enabled: boolean; registration_open: boolean; pending: number; items: AdminUser[] }
