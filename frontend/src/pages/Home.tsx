@@ -1,9 +1,9 @@
 import { useQuery } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
 import { MatchCard } from '../components/MatchCard'
-import { Empty, ErrorBox, Loading, SectionTitle, Stat } from '../components/ui'
+import { Empty, ErrorBox, Loading, SectionTitle } from '../components/ui'
 import { api } from '../lib/api'
-import { fmtDate, fmtDateTime, MODEL_LABEL, mxTodayRange, relative } from '../lib/format'
+import { fmtDate, fmtDateTime, mxTodayRange } from '../lib/format'
 import { useLive } from '../lib/live'
 
 export function Home() {
@@ -33,14 +33,6 @@ export function Home() {
           <Empty>Hoy no hay partidos de Liga MX.{status?.next_kickoff ? ` El próximo es el ${fmtDateTime(status.next_kickoff)}.` : ''}</Empty>
         )}
         <div className="grid gap-3 md:grid-cols-2">{todayMatches.map((m) => <MatchCard key={m.id} m={m} />)}</div>
-      </section>
-
-      <section className="grid grid-cols-2 gap-3 md:grid-cols-4">
-        <Stat label="Próximo partido" value={status?.next_kickoff ? fmtDateTime(status.next_kickoff) : '—'} hint={pending[0] ? `${pending[0].tournament} · Jornada ${pending[0].round ?? '—'}` : undefined} />
-        <Stat label="Partidos pendientes (14 días)" value={pending.length} hint={`${pending.filter((m) => m.prediction).length} con predicción`} />
-        <Stat label="Modelo activo" value={<span className="text-base">{status?.active_model ? (MODEL_LABEL[status.active_model.split('-')[0]] ?? status.active_model) : 'Sin entrenar'}</span>}
-          hint={status?.model_trained_at ? `Entrenado ${relative(status.model_trained_at)} · datos hasta ${fmtDate(status.model_data_cutoff)}` : 'Ejecuta el backtesting para entrenarlo'} />
-        <Stat label="Partidos en la base" value={status?.matches_total ?? '—'} hint={status?.first_match ? `Desde ${fmtDate(status.first_match)}` : undefined} />
       </section>
 
       {up.isLoading && <Loading />}
