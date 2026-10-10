@@ -37,6 +37,9 @@ log = logging.getLogger(__name__)
 ModelFactory = Callable[[], BaseModel]
 
 
+STALE_PENDING_DAYS = 30
+
+
 @dataclass
 class BacktestConfig:
     warmup: int = 4
@@ -69,9 +72,14 @@ class Folds:
 def make_folds(df: pd.DataFrame, cfg: BacktestConfig) -> Folds:
     """Divide los torneos completos en calentamiento, validación y prueba."""
     played = df[df["hg"].notna()]
-    first = df.groupby("tournament")["kickoff"].min().sort_values()
+    # Mediana y no mínimo: un partido fantasma con fecha atípica no debe alterar el orden de los torneos.
+    first = df.groupby("tournament")["kickoff"].median().sort_values()
     counts = played.groupby("tournament").size()
     pending = df[df["hg"].isna() & (df["status"].isin(["scheduled", "in_progress", "postponed"]))]
+    # Un partido "programado" de hace más de 30 días respecto al último jugado es un registro rancio
+    # (ya queda como incidencia stale_scheduled en la auditoría); no vuelve incompleto a su torneo.
+    if not played.empty:
+        pending = pending[pending["kickoff"] >= played["kickoff"].max() - pd.Timedelta(days=STALE_PENDING_DAYS)]
     incomplete = set(pending["tournament"])
     order = [t for t in first.index]
     usable = [t for t in order if counts.get(t, 0) >= cfg.min_matches_per_tournament and t not in incomplete]

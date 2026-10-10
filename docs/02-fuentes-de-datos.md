@@ -7,7 +7,7 @@
 | | ESPN (principal) | Football-Data.co.uk (verificación) | API-Football | football-data.org | TheSportsDB |
 |---|---|---|---|---|---|
 | URL | `https://site.api.espn.com/apis/site/v2/sports/soccer/mex.1/scoreboard?dates=AAAAMMDD` | `https://www.football-data.co.uk/new/MEX.csv` | api-sports.io | api.football-data.org | thesportsdb.com |
-| Temporadas | Comprobado: partidos del Apertura 2016 (15-oct-2016) y temporada actual 2026-27 | El sitio indica desde 2012/13 (descarga pendiente de verificar, ver abajo) | Plan gratis limitado a pocas temporadas | Plan gratis **no incluye** Liga MX | Limitado sin pago |
+| Temporadas | Comprobado en la descarga real: todos los torneos desde el Apertura 2016 (16-jul-2016) hasta el Apertura 2026 en curso | Comprobado: desde 2012/13 | Plan gratis limitado a pocas temporadas | Plan gratis **no incluye** Liga MX | Limitado sin pago |
 | Datos | Fecha/hora UTC, estado (programado, en juego, final, final tras prórroga/penales, aplazado…), marcador, goles con minuto, penales, IDs estables de equipo y partido, escudos | Fecha, hora, local, visitante, goles (HG, AG), resultado, cuotas de apuestas | Completo (alineaciones, estadísticas) | — | — |
 | Formato | JSON | CSV | JSON | JSON | JSON |
 | API key | No | No | Sí | Sí | Sí para lo útil |
@@ -27,9 +27,10 @@ El 2026-10-10 se consultó la API de ESPN y se confirmó:
   `season.slug = "apertura-2016---final"`.
 - El endpoint sin fecha devuelve la temporada "2026-27 Liga BBVA MX, Torneo Apertura".
 
-De Football-Data.co.uk se verificó la definición de columnas en `notes.txt` (HG, AG, Res, cuotas). **La descarga del
-CSV no se pudo completar** desde el entorno de desarrollo en la nube porque su red solo permite gestores de paquetes;
-el código está listo y probado con un CSV de ejemplo, y la verificación real se hará en la primera ejecución con acceso.
+De Football-Data.co.uk se verificó la definición de columnas en `notes.txt` (HG, AG, Res, cuotas). La descarga real
+(10-oct-2026) trajo `MEX.csv` con temporadas desde 2012/13; nota: `www.football-data.co.uk` redirige a
+`football-data.co.uk`, así que ambos dominios deben estar permitidos. Resultado de la verificación cruzada en
+[07-resultados-reales.md](07-resultados-reales.md).
 
 ## Cómo se tratan los datos
 
