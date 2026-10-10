@@ -61,6 +61,7 @@ jobs:
           esac; fi
           echo "task=$T" >> "$GITHUB_OUTPUT"
           echo "Tarea: $T"
+        working-directory: .   # aún no existe backend/: el checkout viene después
       - uses: actions/checkout@v4
         if: steps.cfg.outputs.ok == 'true'
       - uses: actions/setup-python@v5
