@@ -1,11 +1,11 @@
 import { QueryClient, QueryClientProvider, useQuery } from '@tanstack/react-query'
 import { render, screen, waitFor } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { MatchCard } from '../components/MatchCard'
 import { api } from '../lib/api'
 import { LiveProvider } from '../lib/live'
-import type { Match, Status } from '../lib/types'
+import type { LiveResponse, Match, Status } from '../lib/types'
 
 const baseStatus: Status = {
   data_version: 1, server_time: '2026-10-10T00:00:00Z', last_sync_success: '2026-10-10T00:00:00Z', last_sync_attempt: null,
@@ -27,6 +27,8 @@ function Upcoming() {
   return <>{q.data?.map((m) => <MatchCard key={m.id} m={m} />)}</>
 }
 
+const noLive: LiveResponse = { server_time: '2026-10-10T00:00:00Z', active: false, poll_seconds: 120, source_ok_at: null, stale: false, matches: [] }
+beforeEach(() => { vi.spyOn(api, 'live').mockResolvedValue(noLive) })
 afterEach(() => vi.restoreAllMocks())
 
 describe('actualización automática sin recargar', () => {
@@ -84,5 +86,40 @@ describe('MatchCard', () => {
     expect(screen.getByText('1–0')).toBeInTheDocument()
     expect(screen.getByText('Incertidumbre media')).toBeInTheDocument()
     expect(screen.queryByTestId('score')).toBeNull()
+  })
+})
+
+describe('marcador en vivo', () => {
+  it('muestra minuto, marcador y probabilidad en vivo de ESPN sin esperar a la base de datos', async () => {
+    vi.spyOn(api, 'live').mockResolvedValue({
+      ...noLive, active: true, poll_seconds: 30, matches: [{
+        match_id: 1, espn_id: 'm1', state: 'in', status_label: '2º tiempo', clock: "67'", period: 2,
+        home_goals: 2, away_goals: 1, home_red: 0, away_red: 1,
+        live_prob: { p_home: 0.81, p_draw: 0.14, p_away: 0.05, top_score_home: 2, top_score_away: 1, top_score_prob: 0.55,
+          minute: 67.4, remaining_fraction: 0.26 },
+        pregame: { p_home: 0.5, p_draw: 0.3, p_away: 0.2 },
+      }],
+    })
+    const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+    render(<QueryClientProvider client={qc}><MatchCard m={match({ status: 'scheduled' })} /></QueryClientProvider>)
+    await waitFor(() => expect(screen.getByTestId('score')).toHaveTextContent('2 – 1'))
+    expect(screen.getByText(/En vivo · 2º tiempo 67'/)).toBeInTheDocument()
+    expect(screen.getByText('Probabilidad en vivo · minuto 67')).toBeInTheDocument()
+    expect(screen.getByText('81 %')).toBeInTheDocument()
+    expect(screen.getByLabelText('1 tarjetas rojas')).toBeInTheDocument()
+  })
+
+  it('cuando la base ya tiene el resultado final, manda la base', async () => {
+    const live = vi.spyOn(api, 'live').mockResolvedValue({
+      ...noLive, active: true, matches: [{
+        match_id: 1, espn_id: 'm1', state: 'post', status_label: 'Final', clock: null, period: 2,
+        home_goals: 3, away_goals: 3, home_red: 0, away_red: 0, live_prob: null, pregame: null,
+      }],
+    })
+    const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+    render(<QueryClientProvider client={qc}><MatchCard m={match({ status: 'finished', home_goals: 2, away_goals: 1, home_goals_final: 2, away_goals_final: 1 })} /></QueryClientProvider>)
+    await waitFor(() => expect(live).toHaveBeenCalled())
+    expect(screen.getByTestId('score')).toHaveTextContent('2 – 1')
+    expect(screen.queryByTestId('live-prob')).toBeNull()
   })
 })

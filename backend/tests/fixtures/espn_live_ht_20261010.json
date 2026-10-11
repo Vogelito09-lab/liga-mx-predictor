@@ -1,0 +1,359 @@
+{
+ "_nota": "Respuesta REAL de ESPN (scoreboard mex.1 sin fecha) capturada el 2026-10-10 23:56Z, recortada a los campos que usa el marcador en vivo.",
+ "events": [
+  {
+   "id": "401876952",
+   "date": "2026-10-10T23:00Z",
+   "name": "Tijuana at FC Juárez",
+   "season": {
+    "year": 2026,
+    "type": 14277,
+    "slug": "torneo-apertura"
+   },
+   "competitions": [
+    {
+     "date": "2026-10-10T23:00Z",
+     "status": {
+      "clock": 2700.0,
+      "displayClock": "45'+4'",
+      "period": 1,
+      "type": {
+       "id": "23",
+       "name": "STATUS_HALFTIME",
+       "state": "in",
+       "completed": false,
+       "description": "Halftime",
+       "detail": "HT",
+       "shortDetail": "HT"
+      }
+     },
+     "competitors": [
+      {
+       "homeAway": "home",
+       "score": "0",
+       "team": {
+        "id": "17851",
+        "displayName": "FC Juárez",
+        "abbreviation": "JUA"
+       }
+      },
+      {
+       "homeAway": "away",
+       "score": "1",
+       "team": {
+        "id": "10125",
+        "displayName": "Tijuana",
+        "abbreviation": "TIJ"
+       }
+      }
+     ],
+     "details": [
+      {
+       "type": {
+        "id": "98",
+        "text": "Penalty - Scored"
+       },
+       "clock": {
+        "value": 1828.0,
+        "displayValue": "31'"
+       },
+       "team": {
+        "id": "10125"
+       },
+       "scoreValue": 1,
+       "scoringPlay": true,
+       "redCard": false,
+       "yellowCard": false,
+       "penaltyKick": true,
+       "ownGoal": false,
+       "shootout": false
+      },
+      {
+       "type": {
+        "id": "94",
+        "text": "Yellow Card"
+       },
+       "clock": {
+        "value": 2700.0,
+        "displayValue": "45'+2'"
+       },
+       "team": {
+        "id": "17851"
+       },
+       "scoreValue": 0,
+       "scoringPlay": false,
+       "redCard": false,
+       "yellowCard": true,
+       "penaltyKick": false,
+       "ownGoal": false,
+       "shootout": false
+      }
+     ]
+    }
+   ],
+   "status": {
+    "clock": 2700.0,
+    "displayClock": "45'+4'",
+    "period": 1,
+    "type": {
+     "id": "23",
+     "name": "STATUS_HALFTIME",
+     "state": "in",
+     "completed": false,
+     "description": "Halftime",
+     "detail": "HT",
+     "shortDetail": "HT"
+    }
+   }
+  },
+  {
+   "id": "401876955",
+   "date": "2026-10-10T23:00Z",
+   "name": "Atlante at Querétaro",
+   "season": {
+    "year": 2026,
+    "type": 14277,
+    "slug": "torneo-apertura"
+   },
+   "competitions": [
+    {
+     "date": "2026-10-10T23:00Z",
+     "status": {
+      "clock": 2700.0,
+      "displayClock": "45'+5'",
+      "period": 1,
+      "type": {
+       "id": "23",
+       "name": "STATUS_HALFTIME",
+       "state": "in",
+       "completed": false,
+       "description": "Halftime",
+       "detail": "HT",
+       "shortDetail": "HT"
+      }
+     },
+     "competitors": [
+      {
+       "homeAway": "home",
+       "score": "1",
+       "team": {
+        "id": "222",
+        "displayName": "Querétaro",
+        "abbreviation": "QRO"
+       }
+      },
+      {
+       "homeAway": "away",
+       "score": "0",
+       "team": {
+        "id": "226",
+        "displayName": "Atlante",
+        "abbreviation": "ATL"
+       }
+      }
+     ],
+     "details": [
+      {
+       "type": {
+        "id": "94",
+        "text": "Yellow Card"
+       },
+       "clock": {
+        "value": 1190.0,
+        "displayValue": "20'"
+       },
+       "team": {
+        "id": "226"
+       },
+       "scoreValue": 0,
+       "scoringPlay": false,
+       "redCard": false,
+       "yellowCard": true,
+       "penaltyKick": false,
+       "ownGoal": false,
+       "shootout": false
+      },
+      {
+       "type": {
+        "id": "98",
+        "text": "Penalty - Scored"
+       },
+       "clock": {
+        "value": 1491.0,
+        "displayValue": "25'"
+       },
+       "team": {
+        "id": "222"
+       },
+       "scoreValue": 1,
+       "scoringPlay": true,
+       "redCard": false,
+       "yellowCard": false,
+       "penaltyKick": true,
+       "ownGoal": false,
+       "shootout": false
+      },
+      {
+       "type": {
+        "id": "94",
+        "text": "Yellow Card"
+       },
+       "clock": {
+        "value": 2060.0,
+        "displayValue": "35'"
+       },
+       "team": {
+        "id": "226"
+       },
+       "scoreValue": 0,
+       "scoringPlay": false,
+       "redCard": false,
+       "yellowCard": true,
+       "penaltyKick": false,
+       "ownGoal": false,
+       "shootout": false
+      }
+     ]
+    }
+   ],
+   "status": {
+    "clock": 2700.0,
+    "displayClock": "45'+5'",
+    "period": 1,
+    "type": {
+     "id": "23",
+     "name": "STATUS_HALFTIME",
+     "state": "in",
+     "completed": false,
+     "description": "Halftime",
+     "detail": "HT",
+     "shortDetail": "HT"
+    }
+   }
+  },
+  {
+   "id": "401876951",
+   "date": "2026-10-11T01:00Z",
+   "name": "Guadalajara at Atlas",
+   "season": {
+    "year": 2026,
+    "type": 14277,
+    "slug": "torneo-apertura"
+   },
+   "competitions": [
+    {
+     "date": "2026-10-11T01:00Z",
+     "status": {
+      "clock": 0.0,
+      "displayClock": "0'",
+      "type": {
+       "id": "1",
+       "name": "STATUS_SCHEDULED",
+       "state": "pre",
+       "completed": false,
+       "description": "Scheduled",
+       "detail": "Sat, October 10th at 9:00 PM EDT",
+       "shortDetail": "Scheduled"
+      }
+     },
+     "competitors": [
+      {
+       "homeAway": "home",
+       "score": "0",
+       "team": {
+        "id": "216",
+        "displayName": "Atlas",
+        "abbreviation": "ATS"
+       }
+      },
+      {
+       "homeAway": "away",
+       "score": "0",
+       "team": {
+        "id": "219",
+        "displayName": "Guadalajara",
+        "abbreviation": "GDL"
+       }
+      }
+     ],
+     "details": []
+    }
+   ],
+   "status": {
+    "clock": 0.0,
+    "displayClock": "0'",
+    "type": {
+     "id": "1",
+     "name": "STATUS_SCHEDULED",
+     "state": "pre",
+     "completed": false,
+     "description": "Scheduled",
+     "detail": "Sat, October 10th at 9:00 PM EDT",
+     "shortDetail": "Scheduled"
+    }
+   }
+  },
+  {
+   "id": "401876950",
+   "date": "2026-10-11T03:10Z",
+   "name": "Monterrey at América",
+   "season": {
+    "year": 2026,
+    "type": 14277,
+    "slug": "torneo-apertura"
+   },
+   "competitions": [
+    {
+     "date": "2026-10-11T03:10Z",
+     "status": {
+      "clock": 0.0,
+      "displayClock": "0'",
+      "type": {
+       "id": "1",
+       "name": "STATUS_SCHEDULED",
+       "state": "pre",
+       "completed": false,
+       "description": "Scheduled",
+       "detail": "Sat, October 10th at 11:10 PM EDT",
+       "shortDetail": "Scheduled"
+      }
+     },
+     "competitors": [
+      {
+       "homeAway": "home",
+       "score": "0",
+       "team": {
+        "id": "227",
+        "displayName": "América",
+        "abbreviation": "AME"
+       }
+      },
+      {
+       "homeAway": "away",
+       "score": "0",
+       "team": {
+        "id": "220",
+        "displayName": "Monterrey",
+        "abbreviation": "MTY"
+       }
+      }
+     ],
+     "details": []
+    }
+   ],
+   "status": {
+    "clock": 0.0,
+    "displayClock": "0'",
+    "type": {
+     "id": "1",
+     "name": "STATUS_SCHEDULED",
+     "state": "pre",
+     "completed": false,
+     "description": "Scheduled",
+     "detail": "Sat, October 10th at 11:10 PM EDT",
+     "shortDetail": "Scheduled"
+    }
+   }
+  }
+ ]
+}

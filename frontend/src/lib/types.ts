@@ -123,3 +123,19 @@ export interface QJornadaTable {
 export interface QTables { tournament: string; finished: boolean; winners: string[]; rows: QRow[]; jornadas: QJornadaTable[] }
 export interface AdminUser extends AuthUser { created_at: string; last_login_at: string | null; picks: number }
 export interface AdminUsers { email_enabled: boolean; registration_open: boolean; pending: number; items: AdminUser[] }
+
+/** Marcador en vivo (GET /api/live). Viene de ESPN; no se guarda en la base de datos. */
+export interface LiveProb {
+  p_home: number; p_draw: number; p_away: number
+  top_score_home: number; top_score_away: number; top_score_prob: number
+  minute: number; remaining_fraction: number
+}
+export interface LiveMatch {
+  match_id: number; espn_id: string; state: 'pre' | 'in' | 'post'; status_label: string; clock: string | null
+  period: number; home_goals: number | null; away_goals: number | null; home_red: number; away_red: number
+  live_prob: LiveProb | null; pregame: { p_home: number; p_draw: number; p_away: number } | null
+}
+export interface LiveResponse {
+  server_time: string; active: boolean; poll_seconds: number; source_ok_at: string | null; stale: boolean
+  source?: string; matches: LiveMatch[]
+}

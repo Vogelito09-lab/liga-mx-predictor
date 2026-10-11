@@ -3,7 +3,8 @@ import { useState, type FormEvent, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { Avatar } from '../components/Avatar'
 import { CrestPicker } from '../components/CrestPicker'
-import { StatusBadge } from '../components/MatchCard'
+import { LiveBadge, RedCards, StatusBadge } from '../components/MatchCard'
+import { useLiveMatch } from '../lib/livescore'
 import { Alert, Ok, input, primary } from '../components/quiniela-ui'
 import { TeamLogo } from '../components/TeamLogo'
 import { Badge, Card, Empty, ErrorBox, Loading, SectionTitle, Select } from '../components/ui'
@@ -282,13 +283,14 @@ function PickRow({ it, canPlay, value, onChange }: { it: QItem; canPlay: boolean
   const cur = value ?? { home: it.my_pick ? String(it.my_pick.home) : '', away: it.my_pick ? String(it.my_pick.away) : '' }
   const editable = canPlay && !it.locked
   const started = m.status === 'in_progress' || m.status === 'finished'
+  const { lv } = useLiveMatch(m)
   return (
     <Card className="space-y-2 p-3">
       <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-slate-500">
         <span>{fmtDateTime(m.kickoff_utc)}{it.multiplier > 1 ? ` · puntos ×${it.multiplier}` : ''}</span>
         <span className="flex items-center gap-2">
           {it.locked ? <Badge>Cerrado</Badge> : <Badge tone="green">Abierto hasta el inicio</Badge>}
-          {m.status !== 'scheduled' && <StatusBadge m={m} />}
+          {lv ? <LiveBadge lv={lv} /> : m.status !== 'scheduled' && <StatusBadge m={m} />}
         </span>
       </div>
       <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2">
@@ -303,7 +305,13 @@ function PickRow({ it, canPlay, value, onChange }: { it: QItem; canPlay: boolean
         <div className="flex min-w-0 items-center justify-end gap-2"><span className="truncate text-right text-sm font-medium">{m.away.name}</span><TeamLogo team={m.away} /></div>
       </div>
       <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-slate-600 dark:text-slate-400">
-        {started && m.home_goals !== null && <span>Resultado (90'): <b className="tabular-nums">{m.home_goals}–{m.away_goals}</b></span>}
+        {lv && lv.home_goals !== null && (
+          <span data-testid="live-score" className="inline-flex items-center gap-1 font-medium text-red-700 dark:text-red-400">
+            Marcador en vivo: <RedCards n={lv.home_red} /><b className="tabular-nums">{lv.home_goals}–{lv.away_goals}</b><RedCards n={lv.away_red} />
+            {lv.live_prob && <span className="font-normal text-slate-500">(para los puntos cuenta el resultado final a 90')</span>}
+          </span>
+        )}
+        {!lv && started && m.home_goals !== null && <span>Resultado (90'): <b className="tabular-nums">{m.home_goals}–{m.away_goals}</b></span>}
         {it.my_pick && <PointsBadge p={it.my_pick} prefix="Tú" />}
         {it.model_pick && <span className="inline-flex items-center gap-1"><Avatar name="Modelo" crestUrl={null} isModel size={16} />Modelo: <b className="tabular-nums">{it.model_pick.home}–{it.model_pick.away}</b>{it.model_pick.points !== null && ` (${it.model_pick.points} pts)`}</span>}
         {it.locked && it.picks.length > 0 && (
