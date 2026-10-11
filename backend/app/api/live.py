@@ -77,7 +77,7 @@ class _Cache:
     def __init__(self):
         self.lock = threading.Lock()
         self.states: dict[str, LiveState] = {}
-        self.checked_at = 0.0  # monotonic del último intento
+        self.checked_at: float | None = None  # time.monotonic() del último intento
         self.ok_at: datetime | None = None  # hora del último dato bueno
         self.error: str | None = None
 
@@ -87,7 +87,7 @@ class _Cache:
 
 _cache = _Cache()
 _sync_lock = threading.Lock()
-_last_db_sync = 0.0
+_last_db_sync: float | None = None
 
 
 def _window_matches(session: Session, now: datetime) -> list[m.Match]:
@@ -99,7 +99,8 @@ def _window_matches(session: Session, now: datetime) -> list[m.Match]:
 
 def _refresh(matches: list[m.Match], now: datetime) -> None:
     """Pide el marcador a ESPN si el dato guardado ya caducó. Si otra visita ya lo está pidiendo, no espera."""
-    if time.monotonic() - _cache.checked_at < LIVE_TTL_S and all(mt.espn_id in _cache.states for mt in matches):
+    fresh = _cache.checked_at is not None and time.monotonic() - _cache.checked_at < LIVE_TTL_S
+    if fresh and all(mt.espn_id in _cache.states for mt in matches):
         return
     if not _cache.lock.acquire(blocking=False):
         return
@@ -147,7 +148,8 @@ def _maybe_sync_db(matches: list[m.Match]) -> None:
     if not behind:
         return
     with _sync_lock:
-        if time.monotonic() - _last_db_sync < DB_SYNC_MIN_INTERVAL_S:
+        # (time.monotonic() cuenta desde el arranque del equipo: puede ser pequeño, por eso None = nunca)
+        if _last_db_sync is not None and time.monotonic() - _last_db_sync < DB_SYNC_MIN_INTERVAL_S:
             return
         _last_db_sync = time.monotonic()
 

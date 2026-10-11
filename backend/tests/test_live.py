@@ -1,6 +1,7 @@
 """Marcador en vivo: lectura de ESPN, probabilidad por minuto y ruta /api/live."""
 import copy
 import json
+import time
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
@@ -122,8 +123,15 @@ def live_setup(session, monkeypatch):
     syncs = []
     monkeypatch.setattr(live_api, "fetch_scoreboard", fake_fetch)
     monkeypatch.setattr(live_api, "run_job", lambda *a: syncs.append(a))
-    monkeypatch.setattr(live_api, "_last_db_sync", 0.0)
+    monkeypatch.setattr(live_api, "_last_db_sync", None)
     return session, clock, feed, syncs
+
+
+def _wait_for(cond, timeout=3.0):
+    end = time.monotonic() + timeout
+    while not cond():
+        assert time.monotonic() < end, "no ocurrió a tiempo"
+        time.sleep(0.02)
 
 
 def _live_event(status, state, clock_s, period, hs, as_, details=None):
@@ -145,7 +153,7 @@ def test_live_route_minute_by_minute(live_setup):
     assert lv["state"] == "pre" and lv["live_prob"] is None and lv["pregame"] is not None
 
     # Minuto 30, 1-0: la probabilidad local sube respecto a la previa
-    live_api._cache.checked_at = 0
+    live_api._cache.checked_at = None
     clock["now"] = NOW + timedelta(minutes=40)
     feed["events"] = [_live_event("STATUS_FIRST_HALF", "in", 30 * 60, 1, 1, 0,
                                   details=[{"redCard": True, "team": {"id": "2"}}])]
@@ -156,7 +164,7 @@ def test_live_route_minute_by_minute(live_setup):
     assert lv["live_prob"]["p_home"] > lv["pregame"]["p_home"]
     p30 = lv["live_prob"]["p_home"]
     # ESPN ya ve el partido en juego y la base no: se adelanta la sincronización normal (una sola vez)
-    assert len(syncs) == 1
+    _wait_for(lambda: len(syncs) == 1)  # corre en segundo plano
 
     # Dentro de los 25 s siguientes no se vuelve a consultar a ESPN
     calls = feed["calls"]
@@ -164,7 +172,7 @@ def test_live_route_minute_by_minute(live_setup):
     assert feed["calls"] == calls
 
     # Minuto 80, sigue 1-0: aún más probable
-    live_api._cache.checked_at = 0
+    live_api._cache.checked_at = None
     clock["now"] = NOW + timedelta(minutes=95)
     feed["events"] = [_live_event("STATUS_SECOND_HALF", "in", 80 * 60, 2, 1, 0)]
     (lv,) = client.get("/api/live").json()["matches"]
@@ -178,7 +186,7 @@ def test_live_route_keeps_last_data_when_espn_fails(live_setup):
     first = client.get("/api/live").json()
     assert not first["stale"]
     feed["fail"] = True
-    live_api._cache.checked_at = 0
+    live_api._cache.checked_at = None
     clock["now"] = NOW + timedelta(minutes=5)
     body = client.get("/api/live").json()
     (lv,) = body["matches"]
