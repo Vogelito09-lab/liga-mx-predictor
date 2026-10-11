@@ -488,3 +488,10 @@ from app.quiniela import api as quiniela_api  # noqa: E402
 app.include_router(quiniela_api.auth)
 app.include_router(quiniela_api.game)
 app.include_router(quiniela_api.admin)
+
+# ---------------------------------------------------------------------------------------------------
+# Marcador en vivo
+# ---------------------------------------------------------------------------------------------------
+from app.api import live as live_api  # noqa: E402
+
+app.include_router(live_api.router)

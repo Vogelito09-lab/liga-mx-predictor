@@ -1,4 +1,4 @@
-import type { AdminUsers, AuthConfig, AuthResult, AuthUser, Crest, Issue, JobRun, Match, MetricsResponse, MessageResult, Paginated, Prediction, QJornadaDetail, QJornadas, QTables, SeasonRow, Standings, Status, Team, TeamStats } from './types'
+import type { AdminUsers, LiveResponse, AuthConfig, AuthResult, AuthUser, Crest, Issue, JobRun, Match, MetricsResponse, MessageResult, Paginated, Prediction, QJornadaDetail, QJornadas, QTables, SeasonRow, Standings, Status, Team, TeamStats } from './types'
 
 // En producción VITE_API_URL apunta al backend (p. ej. https://ligamx-api.onrender.com).
 const BASE = (import.meta.env.VITE_API_URL ?? '').replace(/\/$/, '')
@@ -34,6 +34,7 @@ const send = (method: string, body: unknown, token: string | null = null): Reque
 
 export const api = {
   status: () => request<Status>('/api/updates/status'),
+  live: () => request<LiveResponse>('/api/live'),
   upcoming: (days = 14) => request<Match[]>(`/api/fixtures/upcoming${qs({ days })}`),
   matches: (p: Record<string, string | number | undefined>) => request<Paginated>(`/api/matches${qs(p)}`),
   predictions: (matchId: number) => request<Prediction[]>(`/api/predictions${qs({ match_id: matchId })}`),

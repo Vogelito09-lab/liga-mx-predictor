@@ -317,3 +317,55 @@ def slim_event(event: dict) -> dict:
         }],
         "status": event.get("status"),
     }
+
+
+# ---------------------------------------------------------------------------------------------------
+# Marcador en vivo
+# ---------------------------------------------------------------------------------------------------
+# Campos verificados el 2026-10-10 con partidos en juego: competitions[0].status.{clock (segundos de juego,
+# se queda en 2700 durante el añadido del 1er tiempo y en el descanso), displayClock ("45'+4'"), period (1, 2;
+# 3-4 = prórroga), type.name (STATUS_FIRST_HALF, STATUS_HALFTIME, STATUS_SECOND_HALF…)} y
+# details[].{redCard, team.id}.
+@dataclass
+class LiveState:
+    espn_id: str
+    state: str  # pre | in | post (de ESPN)
+    source_status: str
+    period: int
+    clock_seconds: float
+    display_clock: str | None
+    detail: str | None
+    home_goals: int | None  # marcador actual de la fuente (incluye prórroga si la hay)
+    away_goals: int | None
+    home_red: int
+    away_red: int
+
+
+def parse_live(event: dict) -> LiveState:
+    comp = (event.get("competitions") or [{}])[0]
+    by_side = {c.get("homeAway"): c for c in comp.get("competitors") or []}
+    if set(by_side) != {"home", "away"}:
+        raise ValueError(f"evento {event.get('id')}: no tiene local y visitante")
+    st = comp.get("status") or event.get("status") or {}
+    stype = st.get("type") or {}
+    home_id = str((by_side["home"].get("team") or {}).get("id"))
+    away_id = str((by_side["away"].get("team") or {}).get("id"))
+    reds = {home_id: 0, away_id: 0}
+    for d in comp.get("details") or []:
+        tid = str((d.get("team") or {}).get("id"))
+        if d.get("redCard") and tid in reds:
+            reds[tid] += 1
+    state = stype.get("state") or "pre"
+    return LiveState(
+        espn_id=str(event.get("id")),
+        state=state if state in ("pre", "in", "post") else "pre",
+        source_status=stype.get("name") or "UNKNOWN",
+        period=_int(st.get("period")) or 0,
+        clock_seconds=float(st.get("clock") or 0),
+        display_clock=st.get("displayClock"),
+        detail=stype.get("shortDetail") or stype.get("detail"),
+        home_goals=_int(by_side["home"].get("score")) if state != "pre" else None,
+        away_goals=_int(by_side["away"].get("score")) if state != "pre" else None,
+        home_red=reds[home_id],
+        away_red=reds[away_id],
+    )

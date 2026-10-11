@@ -6,6 +6,7 @@ Documentación interactiva (OpenAPI) en `/docs` del backend. Todas las fechas en
 |---|---|---|
 | `GET /api/health` | — | Estado del servidor y conexión a la base |
 | `GET /api/updates/status` | `sync_if_stale` (bool, por defecto true) | Versión de datos, última sincronización, si los datos están atrasados (más de 30 min con partidos en juego, o más de 7 h sin partidos), partidos en juego, modelo activo y cada cuánto consultar. Si los datos tienen más de 30 min y hay partidos en curso, inicia una sincronización ligera |
+| `GET /api/live` | — | Marcador en vivo de ESPN (minuto, periodo, rojas) y probabilidad en vivo de los partidos por empezar (15 min antes) o en juego. ESPN se consulta como mucho cada 25 s y la respuesta se comparte; sin partidos no se consulta. `poll_seconds` dice cada cuánto preguntar. Ver [09-marcador-en-vivo.md](09-marcador-en-vivo.md) |
 | `GET /api/seasons` | — | Torneos con número de partidos y fechas |
 | `GET /api/matches` | `tournament`, `season`, `round` (1–40), `team_id`, `stage`, `status`, `date_from`, `date_to`, `order` (asc/desc), `limit` (1–500), `offset` | Partidos con resultado y la última predicción previa al inicio, más si acertó |
 | `GET /api/fixtures/upcoming` | `days` (1–60) | Partidos en juego, programados y finalizados en las últimas 12 h, con predicción |
