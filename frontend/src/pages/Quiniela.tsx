@@ -284,6 +284,9 @@ function PickRow({ it, canPlay, value, onChange }: { it: QItem; canPlay: boolean
   const editable = canPlay && !it.locked
   const started = m.status === 'in_progress' || m.status === 'finished'
   const { lv } = useLiveMatch(m)
+  // Lo grande del centro es el resultado del partido; el pronóstico de cada quien va aparte y con su nombre.
+  const result = lv && lv.home_goals !== null ? { home: lv.home_goals, away: lv.away_goals }
+    : started && m.home_goals !== null ? { home: m.home_goals, away: m.away_goals } : null
   return (
     <Card className="space-y-2 p-3">
       <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-slate-500">
@@ -298,9 +301,12 @@ function PickRow({ it, canPlay, value, onChange }: { it: QItem; canPlay: boolean
         <div className="flex items-center gap-1">
           {editable ? (
             <>{goalInput(cur.home, (v) => onChange({ ...cur, home: v }), `Goles de ${m.home.name}`)}<span className="text-slate-400">–</span>{goalInput(cur.away, (v) => onChange({ ...cur, away: v }), `Goles de ${m.away.name}`)}</>
-          ) : it.my_pick ? (
-            <span className="text-lg font-semibold tabular-nums">{it.my_pick.home} – {it.my_pick.away}</span>
-          ) : <span className="text-xs text-slate-400">{canPlay ? 'Sin pronóstico' : '—'}</span>}
+          ) : result ? (
+            <div className="text-center" data-testid="result">
+              <div className={`text-2xl font-bold tabular-nums ${lv ? 'text-red-600' : ''}`}>{result.home} – {result.away}</div>
+              <div className="text-[10px] uppercase tracking-wide text-slate-500">{lv ? 'En vivo' : 'Resultado (90\')'}</div>
+            </div>
+          ) : <span className="text-sm text-slate-400">vs</span>}
         </div>
         <div className="flex min-w-0 items-center justify-end gap-2"><span className="truncate text-right text-sm font-medium">{m.away.name}</span><TeamLogo team={m.away} /></div>
       </div>
@@ -311,7 +317,9 @@ function PickRow({ it, canPlay, value, onChange }: { it: QItem; canPlay: boolean
             {lv.live_prob && <span className="font-normal text-slate-500">(para los puntos cuenta el resultado final a 90')</span>}
           </span>
         )}
-        {!lv && started && m.home_goals !== null && <span>Resultado (90'): <b className="tabular-nums">{m.home_goals}–{m.away_goals}</b></span>}
+        {canPlay && (it.my_pick
+          ? <span>Tu pronóstico: <b className="tabular-nums">{it.my_pick.home}–{it.my_pick.away}</b></span>
+          : it.locked && <span>Sin pronóstico (0 puntos)</span>)}
         {it.my_pick && <PointsBadge p={it.my_pick} prefix="Tú" />}
         {it.model_pick && <span className="inline-flex items-center gap-1"><Avatar name="Modelo" crestUrl={null} isModel size={16} />Modelo: <b className="tabular-nums">{it.model_pick.home}–{it.model_pick.away}</b>{it.model_pick.points !== null && ` (${it.model_pick.points} pts)`}</span>}
         {it.locked && it.picks.length > 0 && (
